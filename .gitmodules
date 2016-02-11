@@ -1,0 +1,3 @@
+[submodule "hardware"]
+	path = hardware
+	url = git@github.com:clarkok/SystemOnChip.git

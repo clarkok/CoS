@@ -4,9 +4,10 @@ DEP_DIR = build/dep/
 OBJ_DIR = build/
 SRC_DIR = ./
 
-CORE_SRC	= core/init.c
+CORE_SRC	= core/init.c core/debug.c
 MM_SRC		= mm/mm.c
-SOURCES = $(CORE_SRC) $(MM_SRC)
+UTILS_SRC	= utils/bitmap.c
+SOURCES = $(CORE_SRC) $(MM_SRC) $(UTILS_SRC)
 
 include ../../Makefile.inc
 

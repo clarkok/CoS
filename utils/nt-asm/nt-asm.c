@@ -75,6 +75,7 @@ enum {
     I_MOVE  = 57,
     I_BEQZ  = 58,
     I_BNEZ  = 59,
+    I_NOT   = 60,
 
     NR_INST
 };
@@ -83,7 +84,7 @@ const char INSTS_LITERIAL[] =
     "lb lbu lh lhu lw ll sb sh sw sc addi addiu slti sltiu andi ori xori lui "
     "add addu sub subu slt sltu and or xor nor sll srl sra sllv srlv srav mult "
     "multu div divu mfhi mthi mflo mtlo j jal jr jalr beq bne bltz bgez "
-    "syscall break eret mfc0 mtc0 sync nop move beqz bnez"
+    "syscall break eret mfc0 mtc0 sync nop move beqz bnez not"
     " ";
 
 const char REG_LITERIAL_ALIAS[] =
@@ -452,7 +453,8 @@ parse_directive(char *scan_ptr, int *line, int alignment)
         current_section->size = (current_section->size + alignment - 1) & -alignment;
         return strpbrk(scan_ptr, "\n");
     }
-    else if (strncmp(scan_ptr, ".asciiz", directive_limit - scan_ptr) == 0) {
+    else if (strncmp(scan_ptr, ".asciiz", directive_limit - scan_ptr) == 0 ||
+             strncmp(scan_ptr, ".asciz", directive_limit - scan_ptr) == 0) {
         scan_ptr = parse_chr(directive_limit, '"', line);
         while (*scan_ptr != '"') {
             current_section->size ++;
@@ -617,6 +619,11 @@ parse_inst_label(char *scan_ptr, int *line)
                 scan_ptr = parse_reg(scan_ptr, line);
                 scan_ptr = parse_chr(scan_ptr, ',', line);
                 scan_ptr = parse_imm(scan_ptr, line);
+                break;
+            case I_NOT:
+                scan_ptr = parse_reg(scan_ptr, line);
+                scan_ptr = parse_chr(scan_ptr, ',', line);
+                scan_ptr = parse_reg(scan_ptr, line);
         };
         current_section->size += 4;
     }
@@ -798,7 +805,8 @@ trans_directive(char *scan_ptr, int alignment)
         current_section->size = (current_section->size + alignment - 1) & -alignment;
         return strpbrk(scan_ptr, "\n");
     }
-    else if (strncmp(scan_ptr, ".asciiz", directive_limit - scan_ptr) == 0) {
+    else if (strncmp(scan_ptr, ".asciiz", directive_limit - scan_ptr) == 0 ||
+             strncmp(scan_ptr, ".asciz", directive_limit - scan_ptr) == 0) {
         scan_ptr = parse_chr(directive_limit, '"', line);
         while (*scan_ptr != '"') {
             if (*scan_ptr == '\\') {
@@ -1164,6 +1172,16 @@ trans_inst_label(char *scan_ptr)
                     case I_MFC0:    *inst |= 0x40000000;    break;
                     case I_MTC0:    *inst |= 0x40000004;    break;
                 }
+                break;
+            }
+        case I_NOT:
+            {
+                scan_ptr = trans_reg(scan_ptr, &tmp);
+                *inst |= (tmp << 11);
+                scan_ptr = parse_chr(scan_ptr, ',', line);
+                scan_ptr = trans_reg(scan_ptr, &tmp);
+                *inst |= (tmp << 21);
+                *inst |= 0x00000027;
                 break;
             }
     }

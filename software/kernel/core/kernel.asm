@@ -29,7 +29,7 @@ kernel_init:
     sw      $t0,    6144($at)           # from 2GB to 2GB + 4MB
 
     addiu   $t0,    $zero,  0x3001
-    sw      $t0,    8188($at)           # stack
+    sw      $t0,    7164($at)           # stack
 
     # build page ent at 0xC0000000 + 8KB
     lui     $at,    %hi(kernel_size)
@@ -59,8 +59,13 @@ _kernel_build_page_ent_cmp:
     lui     $t0,    %hi(0x000FE003)
     addiu   $t0,    $t0,    %lo(0x000FE003)
     sw      $t0,    0x3FF8($at)
-    addiu   $t0,    $t0,    0x0100
+    addiu   $t0,    $t0,    0x1000
     sw      $t0,    0x3FFC($at)
+
+    # setting dir_bitmap
+    addiu   $t0,    $zero,  3
+    lui     $at,    0xC000
+    sw      $t0,    0($at)
 
     # setting ent_allocated
     addiu   $t0,    $zero,  252
@@ -78,7 +83,7 @@ _kernel_build_page_ent_cmp:
     sw      $t0,    4092($at)
 
     # initial $sp
-    lui     $sp,    0xA000
+    lui     $sp,    0xC000
     
     addiu   $at,    $zero,  4096
     sync
@@ -92,6 +97,8 @@ paging_succeed:
     lui     $a1,    %hi(KERNRL_PAGED)
     addiu   $a1,    $a1,    %lo(KERNRL_PAGED)
     syscall
+
+    jal     init
 
 forever:
     j       forever

@@ -9,7 +9,7 @@ all:
 	sudo cp kernel/product/kernel.img /mnt
 	sudo umount /mnt
 
-run:
+run: all
 	~/c-stack/mips_c/build/mips_c -l boot/product/bios.bin:4294963200 -s 4294963200 -f /dev/sdb
 
 .PHONY: all clean run

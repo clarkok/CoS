@@ -1,39 +1,39 @@
 #include "ctype.h"
 
 int
-isalnum(int ch)
+isalnum(int ch) __attribute__((always_inline))
 { return isalpha(ch) || isdigit(ch); }
 
 int
-isalpha(int ch)
+isalpha(int ch) __attribute__((always_inline))
 { return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'); }
 
 int
-isblank(int ch)
+isblank(int ch) __attribute__((always_inline))
 { return (ch == '\t') || (ch == ' '); }
 
 int
-iscntrl(int ch)
+iscntrl(int ch) __attribute__((always_inline))
 { return (ch <= 0x1F) || (ch == 0x7F); }
 
 int
-isdigit(int ch)
+isdigit(int ch) __attribute__((always_inline))
 { return (ch >= '0' && ch <= '9'); }
 
 int
-isgraph(int ch)
+isgraph(int ch) __attribute__((always_inline))
 { return (ch >= 0x21 && ch <= 0x7E); }
 
 int
-islower(int ch)
+islower(int ch) __attribute__((always_inline))
 { return (ch >= 'a' && ch <= 'z'); }
 
 int
-isprint(int ch)
+isprint(int ch) __attribute__((always_inline))
 { return (ch >= 0x20 && ch <= 0x7E); }
 
 int
-ispunct(int ch)
+ispunct(int ch) __attribute__((always_inline))
 {
     return (ch >= 0x21 && ch <= 0x2F) ||
            (ch >= 0x3A && ch <= 0x40) ||
@@ -42,13 +42,13 @@ ispunct(int ch)
 }
 
 int
-isspace(int ch)
+isspace(int ch) __attribute__((always_inline))
 { return (ch >= 0x09 && ch <= 0x0D) || (ch == ' '); }
 
 int
-isupper(int ch)
+isupper(int ch) __attribute__((always_inline))
 { return (ch >= 'A' && ch <= 'Z'); }
 
 int
-isxdigit(int ch)
+isxdigit(int ch) __attribute__((always_inline))
 { return (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F') || (ch >= 'a' && ch <= 'f'); }

@@ -6,9 +6,14 @@
 
 #include "utils/bitmap.h"
 
+#define MM_TOTAL_MEMORY         (512*1024*1024)
+#define MM_TOTAL_MEMORY_SHIFT   (29)
+
 #define MM_PAGE_SHIFT       (12)
 #define MM_PAGE_SIZE        (1 << MM_PAGE_SHIFT)
 #define MM_USER_SPACE_SIZE  (2*1024*1024*1024u)
+
+#define MM_INVALID_PAGE     (0xFFFFFFFFu)
 
 #define mm_get_direct_mapped_by_frame(frame)   \
     (DIRECT_BASE + ((frame) << 12))

@@ -5,7 +5,7 @@ OBJ_DIR = build/
 SRC_DIR = ./
 
 CORE_SRC	= core/init.c core/debug.c
-MM_SRC		= mm/mm.c
+MM_SRC		= mm/mm.c mm/buddy.c
 UTILS_SRC	= utils/bitmap.c
 SOURCES = $(CORE_SRC) $(MM_SRC) $(UTILS_SRC)
 
@@ -17,7 +17,8 @@ product/kernel.img: $(CORE_ASM) build/kernel.asm
 build/kernel.asm: build/kernel.bc
 	$(ASW) -o $@ $<
 
-build/kernel.bc: $(OBJECTS)
+build/kernel.bc: $(OBJECTS) ../libc/product/libc.bc
+	make -C ../libc
 	$(LK) -o $@ $^
 
 $(foreach i,$(SOURCES),$(eval $(call COMPILE_MACRO,$(i))))

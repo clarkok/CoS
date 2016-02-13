@@ -45,6 +45,7 @@ flags = [
 '-nostdlib',
 '-isystem',
 '../libc/',
+'-Wno-gcc-compat',
 '-x',
 'c',
 '-I',

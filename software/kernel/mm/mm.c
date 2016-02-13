@@ -4,44 +4,31 @@
 #include "utils/utils.h"
 
 #include "mm.h"
-
-#define BUDDY_TREE_SIZE         (1*1024*1024)   // 1MB
-#define KERNEL_PAGE_TABLE_SIZE  (1*1024*1024)   // 1MB
+#include "buddy.h"
+#include "mm_intl.h"
 
 #define ENT_PER_PAGE    (MM_PAGE_SIZE / sizeof(MMPageEnt))
 
-static uint32_t *mm_buddy_tree;
-MemoryManagement *kmm;
-
-static void _mm_map_to_physical(MemoryManagement *, addr_t, size_t, addr_t, bool);
-static void _mm_fill_page_ent(MMPageEnt *, size_t, addr_t, bool);
-static addr_t _mm_get_page_dir(addr_t);
-static addr_t _mm_get_page_ent(addr_t);
-static addr_t _mm_get_page_no(addr_t);
-static addr_t _mm_get_page_dir_from_page(page_t);
+MemoryManagement *_kmm;
 
 void
 mm_init()
 {
     dbg_uart_str("mm_init\n");
 
-    kmm = (MemoryManagement*)(DIRECT_BASE);
+    _kmm = (MemoryManagement*)(DIRECT_BASE);
     dbg_uart_str("  Heap point: ");
-    dbg_uart_hex(kmm->heap_point);
+    dbg_uart_hex(_kmm->heap_point);
     dbg_uart_str("  Page ent allocated: ");
-    dbg_uart_hex(kmm->ent_allocated);
+    dbg_uart_hex(_kmm->ent_allocated);
     dbg_uart_str("\n");
 
-    // map buddy tree space to 1MB phy space after kernel
-    _mm_map_to_physical(
-            kmm,
-            (kmm->heap_point + MAPPED_BASE + MM_PAGE_SIZE - 1) >> MM_PAGE_SHIFT,
-            BUDDY_TREE_SIZE >> MM_PAGE_SHIFT,
-            (kmm->heap_point + MM_PAGE_SIZE - 1) >> MM_PAGE_SHIFT,
-            true
-        );
-    mm_buddy_tree = (uint32_t*)(MAPPED_BASE + kmm->heap_point);
+    mm_buddy_init();
 }
+
+MemoryManagement *
+mm_get_kernel_mm() __ALWAYS_INLINE__
+{ return _kmm; }
 
 /**
  * map @page_nr pages virtual address from @v_start into physical frames start
@@ -53,7 +40,7 @@ mm_init()
  * @param p_start starting page number of physical address
  * @param we write enable for those pages
  */
-static void
+void
 _mm_map_to_physical(
         MemoryManagement *mm,
         page_t v_start,
@@ -96,7 +83,7 @@ _mm_map_to_physical(
  * @param page_nr number of pages to fill
  * @param p_start starting physical frame number 
  */
-static void
+void
 _mm_fill_page_ent(
         MMPageEnt *ent,
         size_t page_nr,
@@ -114,18 +101,19 @@ _mm_fill_page_ent(
     }
 }
 
-static inline addr_t
-_mm_get_page_dir(addr_t addr)
+addr_t
+_mm_get_page_dir(addr_t addr) __ALWAYS_INLINE__
 { return addr >> 22; }
 
-static inline addr_t
-_mm_get_page_ent(addr_t addr)
+addr_t
+_mm_get_page_ent(addr_t addr) __ALWAYS_INLINE__
 { return (addr >> 12) & 0x3FF; }
 
-static inline page_t
-_mm_get_page_no(addr_t addr)
+page_t
+_mm_get_page_no(addr_t addr) __ALWAYS_INLINE__
 { return (_mm_get_page_dir(addr) << 10) | _mm_get_page_ent(addr); }
 
-static inline addr_t
-_mm_get_page_dir_from_page(page_t page)
+addr_t
+_mm_get_page_dir_from_page(page_t page) __ALWAYS_INLINE__
 { return page >> 10; }
+

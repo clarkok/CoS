@@ -2,7 +2,7 @@ PROJECT_PATH=/home/c/c-stack/SoC
 
 UTILS_DIR=$(PROJECT_PATH)/utils
 
-CC=clang-3.8 -emit-llvm -c -nodefaultlibs -Wno-incompatible-library-redeclaration -nostdlib -Wall -m32 -isystem $(PROJECT_PATH)/software/libc/ -I .
+CC=clang-3.8 -emit-llvm -c -Wall -nodefaultlibs -Wno-gcc-compat -Wno-unused-function -Wno-incompatible-library-redeclaration -nostdlib -m32 -isystem $(PROJECT_PATH)/software/libc/ -I .
 LK=llvm-link-3.8
 ASW=llc-3.8 -relocation-model=static -disable-mips-delay-filler -march=mipsel 
 AS=$(UTILS_DIR)/nt-asm/nt-asm

@@ -1377,10 +1377,12 @@ main(int argc, char **argv)
     current_section = section_table;
     while (current_section) {
         if (current_section->size) {
-            printf("write section %.*s at offset %u\n", 
+            printf("write section %.*s at offset %u, length %u\n", 
                     current_section->length,
                     current_section->name,
-                    current_section->offset - base);
+                    current_section->offset - base,
+                    current_section->size
+                );
             fseek(fp, current_section->offset - base, SEEK_SET);
             if (!fwrite(current_section->content, current_section->size, 1, fp)) {
                 printf("ERROR: Unable to write file\n");
@@ -1395,11 +1397,13 @@ main(int argc, char **argv)
         current_section = current_section->next;
     }
     if (comm_section.size) {
-        printf("write section %.*s at offset %u\n", 
+        printf("write section %.*s at offset %u, length %u\n", 
                 comm_section.length,
                 comm_section.name,
-                comm_section.offset - base);
-        fseek(fp, comm_section.offset - base - 1, SEEK_SET);
+                comm_section.offset - base,
+                comm_section.size
+            );
+        fseek(fp, comm_section.offset + comm_section.size - base - 1, SEEK_SET);
         if (EOF == fputc('\0', fp)) {
             printf("ERROR: Unable to write file\n");
             printf("    when writing section %.*s\n",

@@ -43,16 +43,30 @@ typedef struct MMPageDir
 
 static_assert((sizeof(MMPageDir) == 4), mm_page_dir_should_be_4_byte);
 
+typedef struct BuddyAllocated
+{
+    unsigned int start  : 24;
+    unsigned int shift  : 8;
+} BuddyAllocated;
+
+static_assert((sizeof(BuddyAllocated) == 4), buddy_allocated_should_by_4_byte);
+
 // NOTE: this should align to MM_PAGE_SIZE
 typedef struct MemoryManagement
 {
     bitmap_t dir_bitmap[(MM_PAGE_SIZE - 2 * sizeof(size_t)) / sizeof(uint32_t)];
     size_t ent_allocated;
-    size_t heap_point;
+    addr_t heap_point;
+
+    BuddyAllocated buddy_allocated[(MM_PAGE_SIZE / sizeof(BuddyAllocated)) - 1];
+    size_t buddy_allocated_size;
+
     MMPageDir dir[MM_PAGE_SIZE / sizeof(MMPageDir)];
+
     MMPageEnt ent[0];
 } MemoryManagement;
 
 void mm_init();
+addr_t mm_shift_heap_point(MemoryManagement*, addr_t);
 
 #endif // _COS_MM_H_

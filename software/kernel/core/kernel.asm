@@ -23,15 +23,15 @@ kernel_init:
     syscall
 
     ## build struct MemoryManaegment at 0xC0000000
-    # build page dir at 0xC0000000 + 4KB
+    # build page dir at 0xC0000000 + 8KB
     lui     $at,    0xC000
-    addiu   $t0,    $zero,  0x2001      # lower 4MB
-    sw      $t0,    6144($at)           # from 2GB to 2GB + 4MB
+    addiu   $t0,    $zero,  0x3001      # lower 4MB
+    sw      $t0,    10240($at)          # from 2GB to 2GB + 4MB
 
-    addiu   $t0,    $zero,  0x3001
-    sw      $t0,    7164($at)           # stack
+    addiu   $t0,    $zero,  0x4001
+    sw      $t0,    11260($at)          # stack
 
-    # build page ent at 0xC0000000 + 8KB
+    # build page ent at 0xC0000000 + 12KB
     lui     $at,    %hi(kernel_size)
     lui     $t0,    0x4000
     addu    $at,    $at,    $t0
@@ -40,7 +40,7 @@ kernel_init:
     srl     $s0,    $s0,    12
     addiu   $s0,    $s0,    256
     lui     $s1,    0xC000
-    addiu   $s1,    $s1,    8192
+    addiu   $s1,    $s1,    12288
     move    $s2,    $zero
     beq     $zero,  $zero,  _kernel_build_page_ent_cmp  # PIC jump
 _kernel_build_page_ent_loop:
@@ -53,14 +53,14 @@ _kernel_build_page_ent_loop:
 _kernel_build_page_ent_cmp:
     bnez    $s0,    _kernel_build_page_ent_loop
 
-    # build stack page ent at 0xC0000000 + 12KB
+    # build stack page ent at 0xC0000000 + 16KB
     # use only last 2 pages
     lui     $at,    0xC000
     lui     $t0,    %hi(0x000FE003)
     addiu   $t0,    $t0,    %lo(0x000FE003)
-    sw      $t0,    0x3FF8($at)
+    sw      $t0,    0x4FF8($at)
     addiu   $t0,    $t0,    0x1000
-    sw      $t0,    0x3FFC($at)
+    sw      $t0,    0x4FFC($at)
 
     # setting dir_bitmap
     addiu   $t0,    $zero,  3
@@ -68,7 +68,7 @@ _kernel_build_page_ent_cmp:
     sw      $t0,    0($at)
 
     # setting ent_allocated
-    addiu   $t0,    $zero,  252
+    addiu   $t0,    $zero,  251
     lui     $at,    0xC000
     sw      $t0,    4088($at)
 
@@ -85,7 +85,7 @@ _kernel_build_page_ent_cmp:
     # initial $sp
     lui     $sp,    0xC000
     
-    addiu   $at,    $zero,  4096
+    addiu   $at,    $zero,  8192
     sync
     mtc0    $at,    5
     lui     $t0,    %hi(paging_succeed)

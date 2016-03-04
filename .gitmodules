@@ -1,9 +1,6 @@
 [submodule "hardware"]
 	path = hardware
 	url = git@github.com:clarkok/SystemOnChip.git
-[submodule "software/kernel/third_party/check"]
-	path = software/kernel/third_party/check
-	url = https://github.com/libcheck/check.git
 [submodule "software/kernel/third_party/cutest"]
 	path = software/kernel/third_party/cutest
 	url = https://github.com/asimjalis/cutest.git

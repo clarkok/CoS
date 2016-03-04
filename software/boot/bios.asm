@@ -6,6 +6,67 @@ bios_init:
     addiu   $k0,    $k0,    %lo(bios_handler)
     mtc0    $k0,    4
 
+    lw      $t0,    0xFE18($zero)
+    andi    $t0,    $t0,    1
+    beqz    $t0,    _bios_l1_not_check
+    
+_bios_l1_check:
+    lui     $a1,    0xC000
+    addiu   $a2,    $a1,    1024
+    jal     bios_memory_check
+    beqz    $v0,    bios_l1_check_failed
+
+    lui     $a1,    %hi(BIOS_L1_CHECKED)
+    addiu   $a1,    $a1,    %lo(BIOS_L1_CHECKED)
+    jal     bios_uart_str
+
+_bios_l1_not_check:
+    lw      $t0,    0xFE18($zero)
+    andi    $t0,    $t0,    2
+    beqz    $t0,    _bios_l2_not_check
+
+_bios_l2_check:
+    lui     $a1,    0xC000
+    addiu   $a2,    $a1,    16384
+    jal     bios_memory_check
+    beqz    $v0,    bios_l2_check_failed
+
+    lui     $a1,    %hi(BIOS_L2_CHECKED)
+    addiu   $a1,    $a1,    %lo(BIOS_L2_CHECKED)
+    jal     bios_uart_str
+
+_bios_l2_not_check:
+    lw      $t0,    0xFE18($zero)
+    andi    $t0,    $t0,    4
+    beqz    $t0,    _bios_memory_not_check
+
+_bios_memory_full_check:
+    lui     $a1,    0xC000
+    lui     $a2,    0xE000
+    jal     bios_memory_check
+    beqz    $v0,    bios_memory_check_failed
+
+    lui     $a1,    %hi(BIOS_MEMORY_CHECKED)
+    addiu   $a1,    $a1,    %lo(BIOS_MEMORY_CHECKED)
+    jal     bios_uart_str
+
+_bios_memory_not_check:
+    lw      $t0,    0xFE18($zero)
+    andi    $t0,    $t0,    8
+    beqz    $t0,    _bios_flash_not_check
+
+_bios_flash_check:
+    move    $a1,    $zero
+    addiu   $a2,    $zero,  128
+    jal     bios_flash_check
+    beqz    $v0,    _bios_flash_check_failed
+
+    lui     $a1,    %hi(BIOS_FLASH_CHECKED)
+    addiu   $a1,    $a1,    %lo(BIOS_FLASH_CHECKED)
+    jal     bios_uart_str
+
+_bios_flash_not_check:
+
     addiu   $a0,    $zero,  1   # bios_uart_str
     lui     $a1,    %hi(BIOS_START)
     addiu   $a1,    $a1,    %lo(BIOS_START)
@@ -24,6 +85,30 @@ bios_init:
     lui     $gp,    0xC000
     sync
     jr      $gp
+
+bios_l1_check_failed:
+    lui     $a1,    %hi(BIOS_L1_FAILED)
+    addiu   $a1,    $a1,    %lo(BIOS_L1_FAILED)
+    jal     bios_uart_str
+    j       forever
+
+bios_l2_check_failed:
+    lui     $a1,    %hi(BIOS_L2_FAILED)
+    addiu   $a1,    $a1,    %lo(BIOS_L2_FAILED)
+    jal     bios_uart_str
+    j       forever
+
+bios_memory_check_failed:
+    lui     $a1,    %hi(BIOS_MEMORY_FAILED)
+    addiu   $a1,    $a1,    %lo(BIOS_MEMORY_FAILED)
+    jal     bios_uart_str
+    j       forever
+
+bios_flash_check_failed:
+    lui     $a1,    %hi(BIOS_FLASH_FAILED)
+    addiu   $a1,    $a1,    %lo(BIOS_FLASH_FAILED)
+    jal     bios_uart_str
+    j       forever
 
 bios_unknown_exception:
     lui     $a1,    %hi(BIOS_UNKNOWN_EXCEPTION)
@@ -297,7 +382,7 @@ bios_load_file_by_inode:
 
     lw      $at,    12($sp)
     sll     $v0,    $v0,    10
-    sub     $at,    $at,    $v0
+    subu    $at,    $at,    $v0
     beqz    $at,    _bios_load_file_by_inode_end
     bltz    $at,    _bios_load_file_by_inode_end
     sw      $at,    12($sp)
@@ -341,7 +426,7 @@ bios_strcmp:
 _bios_strcmp_same:
     bnez    $k0,    bios_strcmp
 _bios_strcmp_end:
-    sub     $v0,    $k0,    $k1
+    subu    $v0,    $k0,    $k1
     jr      $ra
 
 # @param $a1 dir
@@ -391,6 +476,166 @@ bios_memset_word:
     bnez    $a3,    bios_memset_word
     jr      $ra
 
+# @param $a1 start
+# @param $a2 limit
+bios_memory_check:
+    move    $s3,    $a1
+    move    $s4,    $a1
+    lui     $s5,    0x0010
+    addiu   $s5,    $s5,    -1
+    move    $s6,    $ra
+    move    $s7,    $a2
+
+    j       _bios_memory_check_fill_cmp
+_bios_memory_check_fill_loop:
+    and     $t0,    $s4,    $s5
+    bnez    $t0,    _bios_memory_check_fill_not_print
+
+    move    $a1,    $s4
+    jal     bios_uart_hex
+    lui     $a1,    %hi(BIOS_RETURN_LINE)
+    addiu   $a1,    $a1,    %lo(BIOS_RETURN_LINE)
+    jal     bios_uart_str
+_bios_memory_check_fill_not_print:
+    sw      $s4,    0($s4)
+    addiu   $s4,    $s4,    4
+_bios_memory_check_fill_cmp:
+    subu    $t0,    $s4,    $s7
+    bltz    $t0,    _bios_memory_check_fill_loop
+
+    addiu   $v0,    $zero,  1
+    move    $s4,    $s3
+    j       _bios_memory_check_verf_cmp
+_bios_memory_check_verf_loop:
+    and     $t0,    $s4,    $s5
+    bnez    $t0,    _bios_memory_check_verf_not_print
+
+    move    $a1,    $s4
+    jal     bios_uart_hex
+    lui     $a1,    %hi(BIOS_RETURN_LINE)
+    addiu   $a1,    $a1,    %lo(BIOS_RETURN_LINE)
+    jal     bios_uart_str
+_bios_memory_check_verf_not_print:
+    lw      $t0,    0($s4)
+    bne     $t0,    $s4,    _bios_memory_check_failed
+    addiu   $s4,    $s4,    4
+_bios_memory_check_verf_cmp:
+    subu    $t0,    $s4,    $s7
+    bltz    $t0,    _bios_memory_check_verf_loop
+
+    jr      $s6
+
+_bios_memory_check_failed:
+    move    $a1,    $t0
+    jal     bios_uart_hex
+    move    $a1,    $s4
+    jal     bios_uart_hex
+    lui     $a1,    %hi(BIOS_RETURN_LINE)
+    addiu   $a1,    $a1,    %lo(BIOS_RETURN_LINE)
+    jal     bios_uart_str
+    move    $v0,    $zero
+    jr      $s6
+
+# @param $a1 start
+# @param $a2 count
+bios_flash_check:
+    move    $s7,    $ra
+    move    $s6,    $a2
+    move    $s5,    $a1
+    move    $s4,    $a2
+    move    $s3,    $a1
+
+    j       _bios_flash_check_fill_cmp
+_bios_flash_check_fill_loop:
+    move    $a1,    $s3
+    jal     bios_uart_hex
+    lui     $a1,    %hi(BIOS_RETURN_LINE)
+    addiu   $a1,    $a1,    %lo(BIOS_RETURN_LINE)
+    jal     bios_uart_str
+
+    sll     $t0,    $s4,    16
+    addiu   $t1,    $zero,  128
+    addiu   $t2,    $zero,  0xFC00
+
+    j       _bios_flash_check_fill_sector_cmp
+_bios_flash_check_fill_sector_loop:
+    sw      $t0,    0($t2)
+    addiu   $t0,    $t0,    4
+    addiu   $t1,    $t1,    -1
+    addiu   $t2,    $t2,    4
+_bios_flash_check_fill_sector_cmp:
+    bnez    $t1,    _bios_flash_check_fill_sector_loop
+
+    lui     $t0,    0x2000
+    addu    $t0,    $t0,    $s3
+    addiu   $t1,    $zero,  0xFE00
+    sw      $t0,    0($t1)
+
+_bios_flash_check_fill_wait_loop:
+    lw      $t0,    0($t1)
+    bgez    $t0,    _bios_flash_check_fill_wait_loop
+
+    addiu   $s3,    $s3,    1
+    addiu   $s4,    $s4,    -1
+
+_bios_flash_check_fill_cmp:
+    bnez    $s4,    _bios_flash_check_fill_loop
+
+    move    $s4,    $s6
+    move    $s3,    $s5
+    j       _bios_flash_check_verf_cmp
+
+_bios_flash_check_verf_loop:
+    move    $a1,    $s3
+    jal     bios_uart_hex
+    lui     $a1,    %hi(BIOS_RETURN_LINE)
+    addiu   $a1,    $a1,    %lo(BIOS_RETURN_LINE)
+    jal     bios_uart_str
+    
+    lui     $t0,    0x4000
+    addu    $t0,    $t0,    $s3
+    addiu   $t1,    $zero,  0xFE00
+    sw      $t0,    0($t1)
+
+_bios_flash_check_verf_wait_loop:
+    lw      $t0,    0($t1)
+    bgez    $t0,    _bios_flash_check_verf_wait_loop
+
+    sll     $t0,    $s4,    16
+    addiu   $t1,    $zero,  128
+    addiu   $t2,    $zero,  0xFC00
+
+    j       _bios_flash_check_verf_sector_cmp
+_bios_flash_check_verf_sector_loop:
+    lw      $t3,    0($t2)
+    bne     $t3,    $t0,    _bios_flash_check_failed
+    addiu   $t0,    $t0,    4
+    addiu   $t1,    $t1,    -1
+    addiu   $t2,    $t2,    4
+_bios_flash_check_verf_sector_cmp:
+    bnez    $t1,    _bios_flash_check_verf_sector_loop
+
+    addiu   $s4,    $s4,    -1
+    addiu   $s3,    $s3,    1
+    
+_bios_flash_check_verf_cmp:
+    bnez    $s4,    _bios_flash_check_verf_loop
+
+    addiu   $v0,    $zero,  1
+    jr      $s7
+
+_bios_flash_check_failed:
+    move    $a1,    $t3
+    jal     bios_uart_hex
+    move    $a1,    $t0
+    jal     bios_uart_hex
+    lui     $a1,    %hi(BIOS_RETURN_LINE)
+    addiu   $a1,    $a1,    %lo(BIOS_RETURN_LINE)
+    jal     bios_uart_str
+
+    move    $v0,    $zero
+    jr      $s7
+
     .section ".rodata"
 SYSCALL_TABLE:
     .4byte  (bios_reset)
@@ -424,4 +669,20 @@ BIOS_RETURN_LINE:
     .asciiz "\n"
 BIOS_RESET:
     .asciiz "bios reset\n"
+BIOS_L1_CHECKED:
+    .asciiz "bios l1 checked\n"
+BIOS_L1_FAILED:
+    .asciiz "bios l1 failed\n"
+BIOS_L2_CHECKED:
+    .asciiz "bios l2 checked\n"
+BIOS_L2_FAILED:
+    .asciiz "bios l2 failed\n"
+BIOS_MEMORY_CHECKED:
+    .asciiz "bios memory checked\n"
+BIOS_MEMORY_FAILED:
+    .asciiz "bios memory failed\n"
+BIOS_FLASH_CHECKED:
+    .asciiz "bios flash checked\n"
+BIOS_FLASH_FAILED:
+    .asciiz "bios flash failed\n"
 BIOS_END:

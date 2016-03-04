@@ -1,13 +1,12 @@
-CORE_ASM= core/kernel.asm
+CORE_ASM= 
 
 DEP_DIR = build/dep/
 OBJ_DIR = build/
 SRC_DIR = ./
 
-CORE_SRC	= core/init.c core/debug.c
-MM_SRC		= mm/mm.c mm/buddy.c
-UTILS_SRC	= utils/bitmap.c
-SOURCES = $(CORE_SRC) $(MM_SRC) $(UTILS_SRC)
+CORE_SRC 	= core/cos.c
+UTILS_SRC	= utils/sb-tree.c
+SOURCES = $(UTILS_SRC)
 
 include ../../Makefile.inc
 
@@ -21,11 +20,19 @@ build/kernel.bc: $(OBJECTS) ../libc/product/libc.bc
 	make -C ../libc
 	$(LK) -o $@ $^
 
+build/kernel-test.bc: $(OBJECTS)
+	$(LK) -o $@ $^
+
 $(foreach i,$(SOURCES),$(eval $(call COMPILE_MACRO,$(i))))
 
 -include $(DEP_DIR)*.P
 
-.PHONY: clean
+.PHONY: clean test
+
+test: build/kernel-test.bc test/test.c
+	$(TEST_CC) -Ithird_party/cutest/ -o test/test test/test.c third_party/cutest/CuTest.c $(SOURCES)
+	./test/test
 
 clean:
-	rm product/*
+	rm -f build/*.*
+	rm -f product/*

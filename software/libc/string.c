@@ -1,41 +1,41 @@
 #include "string.h"
 
-static inline void
-_memcpy_aligned(void *dst, const void *src, size_t num)
+void
+_memcpy_aligned(void *dst, const void *src, size_t num) __attribute__((always_inline))
 {
     uint32_t *dst_i = (uint32_t*)dst,
              *src_i = (uint32_t*)src;
     size_t count = ((num >> 2) + 7) >> 3;
     if (!num) return;
     switch (count & 0x7) {
-    case 0: do { *dst_i++ = *src_i;
-    case 7:      *dst_i++ = *src_i;
-    case 6:      *dst_i++ = *src_i;
-    case 5:      *dst_i++ = *src_i;
-    case 4:      *dst_i++ = *src_i;
-    case 3:      *dst_i++ = *src_i;
-    case 2:      *dst_i++ = *src_i;
-    case 1:      *dst_i++ = *src_i;
+    case 0: do { *dst_i++ = *src_i++;
+    case 7:      *dst_i++ = *src_i++;
+    case 6:      *dst_i++ = *src_i++;
+    case 5:      *dst_i++ = *src_i++;
+    case 4:      *dst_i++ = *src_i++;
+    case 3:      *dst_i++ = *src_i++;
+    case 2:      *dst_i++ = *src_i++;
+    case 1:      *dst_i++ = *src_i++;
             } while(--count > 0);
     }
 }
 
-static inline void
-_memcpy_unaligned(void *dst, const void *src, size_t num)
+void
+_memcpy_unaligned(void *dst, const void *src, size_t num)  __attribute__((always_inline))
 {
     uint8_t *dst_i = (uint8_t*)dst,
             *src_i = (uint8_t*)src;
     size_t count = (num + 7) >> 3;
     if (!num) return;
     switch (count & 0x7) {
-    case 0: do { *dst_i++ = *src_i;
-    case 7:      *dst_i++ = *src_i;
-    case 6:      *dst_i++ = *src_i;
-    case 5:      *dst_i++ = *src_i;
-    case 4:      *dst_i++ = *src_i;
-    case 3:      *dst_i++ = *src_i;
-    case 2:      *dst_i++ = *src_i;
-    case 1:      *dst_i++ = *src_i;
+    case 0: do { *dst_i++ = *src_i++;
+    case 7:      *dst_i++ = *src_i++;
+    case 6:      *dst_i++ = *src_i++;
+    case 5:      *dst_i++ = *src_i++;
+    case 4:      *dst_i++ = *src_i++;
+    case 3:      *dst_i++ = *src_i++;
+    case 2:      *dst_i++ = *src_i++;
+    case 1:      *dst_i++ = *src_i++;
             } while(--count > 0);
     }
 }
@@ -65,6 +65,74 @@ memcpy(void *dst, const void *src, size_t num)
     }
     else {
         _memcpy_unaligned(dst, src, num);
+    }
+
+    return ret;
+}
+
+void
+_memcpy_back_aligned(void *dst, const void *src, size_t num) __attribute__((always_inline))
+{
+    uint32_t *dst_i = (uint32_t*)dst + (num >> 2),
+             *src_i = (uint32_t*)src + (num >> 2);
+    size_t count = ((num >> 2) + 7) >> 3;
+    if (!num) return;
+    switch (count & 0x7) {
+    case 0: do { *--dst_i = *--src_i;
+    case 7:      *--dst_i = *--src_i;
+    case 6:      *--dst_i = *--src_i;
+    case 5:      *--dst_i = *--src_i;
+    case 4:      *--dst_i = *--src_i;
+    case 3:      *--dst_i = *--src_i;
+    case 2:      *--dst_i = *--src_i;
+    case 1:      *--dst_i = *--src_i;
+            } while(--count > 0);
+    }
+}
+
+void
+_memcpy_back_unaligned(void *dst, const void *src, size_t num)  __attribute__((always_inline))
+{
+    uint8_t *dst_i = (uint8_t*)dst + num,
+            *src_i = (uint8_t*)src + num;
+    size_t count = (num + 7) >> 3;
+    if (!num) return;
+    switch (count & 0x7) {
+    case 0: do { *--dst_i = *--src_i;
+    case 7:      *--dst_i = *--src_i;
+    case 6:      *--dst_i = *--src_i;
+    case 5:      *--dst_i = *--src_i;
+    case 4:      *--dst_i = *--src_i;
+    case 3:      *--dst_i = *--src_i;
+    case 2:      *--dst_i = *--src_i;
+    case 1:      *--dst_i = *--src_i;
+            } while(--count > 0);
+    }
+}
+
+void *
+memcpy_back(void *dst, const void *src, size_t num)
+{
+    size_t padding;
+    void *ret = dst;
+
+    if (((size_t)dst & 0x3) == ((size_t)src & 0x3)) {
+        padding = ((size_t)dst + num) & 0x3;
+        _memcpy_back_unaligned(
+                dst + num - padding,
+                src + num - padding,
+                padding
+            );
+        padding = (size_t)dst & 0x3;
+        _memcpy_back_aligned(
+                dst + padding,
+                src + padding,
+                num - padding
+            );
+        _memcpy_back_unaligned(dst, src, padding);
+    }
+    else {
+        _memcpy_back_unaligned(dst, src, num);
     }
 
     return ret;

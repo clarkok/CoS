@@ -5,6 +5,7 @@
 #include "stddef.h"
 
 void *memcpy(void *dst, const void *src, size_t num);
+void *memcpy_back(void *dst, const void *src, size_t num);
 // void *memmove(void *dst, const void *src, size_t num);
 char *strcpy(char *dst, const char *src);
 char *strncpy(char *dst, const char *src, size_t num);

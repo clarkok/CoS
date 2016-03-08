@@ -43,6 +43,7 @@ linked_list_prepend_test(CuTest *tc)
         LinkedListTestNode *node = (LinkedListTestNode*)malloc(sizeof(LinkedListTestNode));
         node->number = i;
         list_prepend(&uut, &node->_link);
+        CuAssertTrue(tc, (int)node->_link.prev);
     }
 
     CuAssertIntEquals(tc, 16, list_size(&uut));

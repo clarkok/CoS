@@ -100,7 +100,7 @@ sb_tree_unlink_test(CuTest *tc)
 }
 
 CuSuite *
-sb_tree_test_suit(void)
+sb_tree_test_suite(void)
 {
     CuSuite *suite = CuSuiteNew();
 

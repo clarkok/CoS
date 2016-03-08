@@ -3,6 +3,8 @@
 
 #include "test/utils/linked-list-test.c"
 #include "test/utils/sb-tree-test.c"
+#include "test/utils/bits-test.c"
+#include "test/mm/buddy-test.c"
 
 int
 main()
@@ -11,7 +13,9 @@ main()
     CuSuite *suite = CuSuiteNew();
 
     CuSuiteAddSuite(suite, linked_list_test_suite());
-    CuSuiteAddSuite(suite, sb_tree_test_suit());
+    CuSuiteAddSuite(suite, sb_tree_test_suite());
+    CuSuiteAddSuite(suite, bits_test_suite());
+    CuSuiteAddSuite(suite, mm_buddy_test_suite());
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

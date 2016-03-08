@@ -76,6 +76,7 @@ enum {
     I_BEQZ  = 58,
     I_BNEZ  = 59,
     I_NOT   = 60,
+    I_B     = 61,
 
     NR_INST
 };
@@ -84,7 +85,7 @@ const char INSTS_LITERIAL[] =
     "lb lbu lh lhu lw ll sb sh sw sc addi addiu slti sltiu andi ori xori lui "
     "add addu sub subu slt sltu and or xor nor sll srl sra sllv srlv srav mult "
     "multu div divu mfhi mthi mflo mtlo j jal jr jalr beq bne bltz bgez "
-    "syscall break eret mfc0 mtc0 sync nop move beqz bnez not"
+    "syscall break eret mfc0 mtc0 sync nop move beqz bnez not b"
     " ";
 
 const char REG_LITERIAL_ALIAS[] =
@@ -624,6 +625,9 @@ parse_inst_label(char *scan_ptr, int *line)
                 scan_ptr = parse_reg(scan_ptr, line);
                 scan_ptr = parse_chr(scan_ptr, ',', line);
                 scan_ptr = parse_reg(scan_ptr, line);
+            case I_B:
+                scan_ptr = parse_imm(scan_ptr, line);
+                break;
         };
         current_section->size += 4;
     }
@@ -1182,6 +1186,14 @@ trans_inst_label(char *scan_ptr)
                 scan_ptr = trans_reg(scan_ptr, &tmp);
                 *inst |= (tmp << 21);
                 *inst |= 0x00000027;
+                break;
+            }
+        case I_B:
+            {
+                scan_ptr = trans_imm(scan_ptr, &tmp);
+                tmp = (int)tmp - (int)(current_section->size + current_section->offset);
+                *inst |= (tmp & 0x3FFFF) >> 2;
+                *inst |= 0x10000000;
                 break;
             }
     }

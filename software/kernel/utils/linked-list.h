@@ -20,6 +20,8 @@ typedef struct LinkedList
 } LinkedList;
 
 #define list_get(ptr, type, list)   container_of(ptr, type, list)
+#define list_from_node(node)        ((node)->list)
+#define list_node_linked(ptr)       ((ptr)->list)
 
 #define list_head(list) ((list)->head)
 #define list_tail(list) container_of((list)->tail, LinkedNode, next)
@@ -61,10 +63,10 @@ static inline LinkedNode *
 list_append(LinkedList *list, LinkedNode *node)
 {
     node->prev      = list->tail;
-    *(list->tail)   = node;
-    list->tail      = &(node->next);
     node->next      = NULL;
     node->list      = list;
+    *(list->tail)   = node;
+    list->tail      = &(node->next);
 
     ++list->size;
 
@@ -75,6 +77,8 @@ static inline LinkedNode *
 list_prepend(LinkedList *list, LinkedNode *node)
 {
     node->next = list->head;
+    node->prev = &(list->head);
+    node->list = list;
     list->head = node;
     if (node->next) {
         node->next->prev = &(node->next);
@@ -132,6 +136,7 @@ list_unlink(LinkedNode *node)
         node->list->tail = node->prev;
     }
     --node->list->size;
+    node->list = NULL;
     return node;
 }
 

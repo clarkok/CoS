@@ -23,6 +23,10 @@
 #define PAGE_SIZE           (4096)
 #define PAGE_SHIFT          (12)
 
+#define DIRECT_MAPPED_START (0xC0000000)
+#define KERNEL_START        (0x80000000)
+#define KERNEL_SPACE_SIZE   (0x40000000)
+
 static_assert((1 << MAIN_MEMORY_SHIFT) == MAIN_MEMORY_SIZE, "memory size should match with memory shift");
 static_assert((1 << PAGE_SHIFT) == PAGE_SIZE, "page size should match with page shift");
 

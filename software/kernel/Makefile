@@ -1,17 +1,18 @@
-CORE_ASM= core/kernel.asm
+CORE_ASM= core/kernel.asm core/interrupt.asm
 
 DEP_DIR = build/dep/
 OBJ_DIR = build/
 SRC_DIR = ./
 
 CORE_SRC 	= core/cos.c
-MM_SRC		= mm/buddy.c mm/mm.c
+MM_SRC		= mm/mm.c mm/buddy.c mm/slab.c
 UTILS_SRC	= utils/sb-tree.c
-SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC)
+PROC_SRC	= proc/proc.c
+SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC)
 
 include ../../Makefile.inc
 
-TEST_SRC 	= mm/buddy.c utils/sb-tree.c
+TEST_SRC 	= utils/sb-tree.c mm/buddy.c mm/slab.c
 
 product/kernel.img: $(CORE_ASM) build/kernel.asm
 	$(AS) -l 274432 -o $@ -O 2148532224 -m product/kernel.map $^

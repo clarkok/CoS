@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 
-inline
-void out_ptb(size_t ptb)
+static inline void
+out_ptb(size_t ptb)
 {
     __asm__ ("sync\n"
              "\tmtc0 %0, 5"
@@ -12,8 +12,8 @@ void out_ptb(size_t ptb)
         );
 }
 
-inline
-void out_uart(char c)
+static inline void
+out_uart(char c)
 {
     __asm__ volatile (
             "sw   %0, 0xFE0C($zero)"
@@ -21,7 +21,8 @@ void out_uart(char c)
         );
 }
 
-void dbg_uart_str(const char *);
-void dbg_uart_hex(size_t);
+static inline void
+dbg_uart_str(const char *str)
+{ while (*str) { out_uart(*str++); } }
 
 #endif

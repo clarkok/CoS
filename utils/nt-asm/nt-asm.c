@@ -299,6 +299,18 @@ parse_reg(char *scan_ptr, int *line)
     return token_limit;
 }
 
+int
+test_if_chr(char *scan_ptr, char c)
+{
+    while (*scan_ptr && *scan_ptr != c) {
+        if (!isspace(*scan_ptr)) {
+            return 0;
+        }
+        ++scan_ptr;
+    }
+    return !!scan_ptr;
+}
+
 char *
 parse_chr(char *scan_ptr, char c, int *line)
 {
@@ -400,11 +412,6 @@ parse_directive(char *scan_ptr, int *line, int alignment)
         size_t size = strtoul(scan_ptr, &scan_ptr, 10);
         scan_ptr = parse_chr(scan_ptr, ',', line);
         size_t align = strtoul(scan_ptr, &scan_ptr, 10);
-
-        printf("comm %.*s size %u align %d\n", 
-                sym->length, sym->name,
-                size, align
-            );
 
         sym->offset = comm_section.size = (comm_section.size + align - 1) & -align;
         sym->section = &comm_section;
@@ -605,8 +612,10 @@ parse_inst_label(char *scan_ptr, int *line)
                 break;
             case I_JALR:
                 scan_ptr = parse_reg(scan_ptr, line);
-                scan_ptr = parse_chr(scan_ptr, ',', line);
-                scan_ptr = parse_reg(scan_ptr, line);
+                if (test_if_chr(scan_ptr, ',')) {
+                    scan_ptr = parse_chr(scan_ptr, ',', line);
+                    scan_ptr = parse_reg(scan_ptr, line);
+                }
                 break;
             case I_BLTZ:    case I_BGEZ:    case I_BEQZ:    case I_BNEZ:
                 scan_ptr = parse_reg(scan_ptr, line);
@@ -1118,11 +1127,15 @@ trans_inst_label(char *scan_ptr)
             }
         case I_JALR:
             {
-                scan_ptr = trans_reg(scan_ptr, &tmp);
-                *inst |= (tmp << 11);
-                scan_ptr = parse_chr(scan_ptr, ',', line);
-                scan_ptr = trans_reg(scan_ptr, &tmp);
-                *inst |= (tmp << 21);
+                unsigned int rd = 31, rt;
+                scan_ptr = trans_reg(scan_ptr, &rt);
+                if (test_if_chr(scan_ptr, ',')) {
+                    rd = rt;
+                    scan_ptr = parse_chr(scan_ptr, ',', line);
+                    scan_ptr = trans_reg(scan_ptr, &rt);
+                }
+                *inst |= (rd << 11);
+                *inst |= (rt << 21);
                 *inst |= 0x00000009;
                 break;
             }

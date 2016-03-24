@@ -638,18 +638,18 @@ _bios_flash_check_failed:
 
     .section ".rodata"
 SYSCALL_TABLE:
-    .4byte  (bios_reset)
-    .4byte  (bios_uart_str)
-    .4byte  (bios_uart_hex)
-    .4byte  (bios_memcpy_byte)
-    .4byte  (bios_memcpy_word)
-    .4byte  (bios_flash_read)
-    .4byte  (bios_block_read)
-    .4byte  (bios_load_unaligned_word)
-    .4byte  (bios_load_file_by_inode)
-    .4byte  (bios_strcmp)
-    .4byte  (bios_find_file_in_dir)
-    .4byte  (bios_memset_word)
+    .4byte  (bios_reset)                    # 0
+    .4byte  (bios_uart_str)                 # 1
+    .4byte  (bios_uart_hex)                 # 2
+    .4byte  (bios_memcpy_byte)              # 3
+    .4byte  (bios_memcpy_word)              # 4
+    .4byte  (bios_flash_read)               # 5
+    .4byte  (bios_block_read)               # 6
+    .4byte  (bios_load_unaligned_word)      # 7
+    .4byte  (bios_load_file_by_inode)       # 8
+    .4byte  (bios_strcmp)                   # 9
+    .4byte  (bios_find_file_in_dir)         # 10
+    .4byte  (bios_memset_word)              # 11
 
 BIOS_START:
     .asciiz "bios starting\n"

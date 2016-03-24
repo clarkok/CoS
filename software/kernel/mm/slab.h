@@ -9,9 +9,13 @@
 typedef void *(*SlabPageAlloc)();
 typedef void (*SlabPageFree)(void *);
 
-#define SLAB_SHIFT  (PAGE_SHIFT - 2)       // Minimum allocation unit is 4 Bytes
+#define SLAB_UNIT_SHIFT 4                                   // Minimum allocation unit is 16 Bytes
+#define SLAB_UNIT       (1 << SLAB_UNIT_SHIFT)
+#define SLAB_SHIFT      (PAGE_SHIFT - SLAB_UNIT_SHIFT)
 
 typedef LinkedNode SlabSlice;
+
+static_assert(sizeof(SlabSlice) <= SLAB_UNIT, "size of SlabSlice should be smaller than SLAB_UNIT");
 
 typedef struct SlabPage
 {

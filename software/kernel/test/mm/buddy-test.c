@@ -17,6 +17,8 @@ mm_buddy_init_test(CuTest *tc)
 
     mm_buddy_init(&uut, 16);
     CuAssertIntEquals(tc, (1 << (MM_BUDDY_SHIFT - 1)) - 16, uut.free_nr);
+
+    free(uut.tree);
 }
 
 void
@@ -49,6 +51,26 @@ mm_buddy_alloc_test(CuTest *tc)
     int alloc_res_32 = mm_buddy_alloc(&uut, 32);
     CuAssertIntEquals(tc, 0, alloc_res_32);
     CuAssertIntEquals(tc, total -= 32, uut.free_nr);
+
+    free(uut.tree);
+}
+
+void
+mm_buddy_test_for_mm_init(CuTest *tc)
+{
+    Buddy uut;
+    uut.tree = malloc(MM_BUDDY_TREE_SIZE);
+
+    size_t reserved = (8 * 1024 * 1024) / 4096;
+
+    mm_buddy_init(&uut, reserved);
+
+    for (int i = 0; i < 16; ++i) {
+        int page = mm_buddy_alloc(&uut, 1);
+        CuAssertIntEquals(tc, page, i + reserved);
+    }
+
+    free(uut.tree);
 }
 
 CuSuite *
@@ -58,6 +80,7 @@ mm_buddy_test_suite(void)
 
     SUITE_ADD_TEST(suite, mm_buddy_init_test);
     SUITE_ADD_TEST(suite, mm_buddy_alloc_test);
+    SUITE_ADD_TEST(suite, mm_buddy_test_for_mm_init);
 
     return suite;
 }

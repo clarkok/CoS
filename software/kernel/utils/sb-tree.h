@@ -20,6 +20,12 @@ typedef struct SBTree
     size_t size;
 } SBTree;
 
+#define sb_init(tree)           \
+    do {                        \
+        (tree)->root = NULL;    \
+        (tree)->size = 0;       \
+    } while (0)
+
 #define sb_get(ptr, type, mem)      container_of(ptr, type, mem)
 #define SB_TREE_INIT                {NULL, 0}
 

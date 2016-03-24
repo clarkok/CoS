@@ -5,6 +5,7 @@
 #include "test/utils/sb-tree-test.c"
 #include "test/utils/bits-test.c"
 #include "test/mm/buddy-test.c"
+#include "test/mm/slab-test.c"
 
 int
 main()
@@ -16,6 +17,7 @@ main()
     CuSuiteAddSuite(suite, sb_tree_test_suite());
     CuSuiteAddSuite(suite, bits_test_suite());
     CuSuiteAddSuite(suite, mm_buddy_test_suite());
+    CuSuiteAddSuite(suite, mm_slab_test_suite());
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

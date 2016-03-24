@@ -17,26 +17,27 @@ static inline int
 _mm_slab_get_level(size_t size)
 {
     int msb = bits_msb_idx_32(size);
-    return ((size == (1 << msb)) ? msb : (msb + 1)) - 2;
+    return ((size == (1 << msb)) ? msb : (msb + 1)) - SLAB_UNIT_SHIFT;
 }
 
 static inline size_t
 _mm_slab_slice_nr_in_page(int level)
-{ return (PAGE_SIZE - sizeof(SlabPage)) >> (level + 2); }
+{ return (PAGE_SIZE - sizeof(SlabPage)) >> (level + SLAB_UNIT_SHIFT); }
 
 static inline SlabPage *
 _mm_slab_new_page(Slab *slab, int level)
 {
     SlabPage *page = (SlabPage *)slab->alloc_page();
+    assert(page);
     list_init(&page->free_list);
     page->level = level;
 
     SlabSlice *slice = page->content,
-              *limit = (SlabSlice*)((size_t)(page->content) + (_mm_slab_slice_nr_in_page(level) << (level + 2)));
+              *limit = (SlabSlice*)((size_t)(page->content) + (_mm_slab_slice_nr_in_page(level) << (level + SLAB_UNIT_SHIFT)));
 
-    while (slice <= limit) {
+    while (slice < limit) {
         list_append(&page->free_list, slice);
-        slice = (SlabSlice*)((size_t)slice + (1 << (level + 2)));
+        slice = (SlabSlice*)((size_t)slice + (1 << (level + SLAB_UNIT_SHIFT)));
     }
 
     return page;
@@ -45,9 +46,10 @@ _mm_slab_new_page(Slab *slab, int level)
 void *
 mm_slab_alloc(Slab *slab, size_t size)
 {
-    if (size < 4) size = 4;
+    if (size < SLAB_UNIT) size = SLAB_UNIT;
 
     int level = _mm_slab_get_level(size);
+    assert(level < SLAB_SHIFT);
 
     if (!list_size(slab->pages + level)) {
         SlabPage *page = _mm_slab_new_page(slab, level);
@@ -67,7 +69,7 @@ mm_slab_alloc(Slab *slab, size_t size)
 void
 mm_slab_free(Slab *slab, void *ptr)
 {
-    SlabPage *page = (SlabPage*)((size_t)ptr & (PAGE_SIZE - 1));
+    SlabPage *page = (SlabPage*)((size_t)ptr & ~(PAGE_SIZE - 1));
 
     list_prepend(&page->free_list, (LinkedNode*)ptr);
 

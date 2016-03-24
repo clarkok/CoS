@@ -10,10 +10,9 @@
 void
 mm_buddy_init(Buddy *buddy, size_t reserved)
 {
-    for (int i = 0; i < MM_BUDDY_SHIFT; ++i) {
+    for (int i = 0; i <= MM_BUDDY_SHIFT; ++i) {
         list_init(buddy->head + i);
     }
-    memset(buddy->tree, 0, MM_BUDDY_TREE_SIZE);
     list_prepend(buddy->head, &buddy->tree[1]._link);
     buddy->free_nr = 1 << (MM_BUDDY_SHIFT - 1);
 
@@ -68,7 +67,7 @@ mm_buddy_alloc(Buddy *buddy, size_t page_nr)
     int index = b_node - buddy->tree;
     int page = _mm_buddy_get_page_from_index(index);
 
-    buddy->tree[page + (1 << (MM_BUDDY_SHIFT - 1))].padding = level;
+    buddy->tree[page + (1 << (MM_BUDDY_SHIFT))].padding = level;
     buddy->free_nr -= (1 << (MM_BUDDY_SHIFT - level));
 
     return page;
@@ -77,7 +76,7 @@ mm_buddy_alloc(Buddy *buddy, size_t page_nr)
 void
 mm_buddy_free(Buddy *buddy, int page)
 {
-    int level = buddy->tree[page + (1 << (MM_BUDDY_SHIFT - 1))].padding;
+    int level = buddy->tree[page + (1 << (MM_BUDDY_SHIFT))].padding;
     assert(level);
     buddy->free_nr += (1 << (MM_BUDDY_SHIFT - level));
 

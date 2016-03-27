@@ -79,6 +79,7 @@ enum {
     I_BNEZ  = 61,
     I_NOT   = 62,
     I_B     = 63,
+    I_NEGU  = 64,
 
     NR_INST
 };
@@ -87,7 +88,7 @@ const char INSTS_LITERIAL[] =
     "lb lbu lh lhu lw ll sb sh sw sc addi addiu slti sltiu andi ori xori lui "
     "add addu sub subu slt sltu and or xor nor sll srl sra sllv srlv srav mult "
     "multu div divu mfhi mthi mflo mtlo j jal jr jalr beq bne bltz bgez blez bgtz "
-    "syscall break eret mfc0 mtc0 sync nop move beqz bnez not b"
+    "syscall break eret mfc0 mtc0 sync nop move beqz bnez not b negu"
     " ";
 
 const char REG_LITERIAL_ALIAS[] =
@@ -641,6 +642,11 @@ parse_inst_label(char *scan_ptr, int *line)
                 break;
             case I_B:
                 scan_ptr = parse_imm(scan_ptr, line);
+                break;
+            case I_NEGU:
+                scan_ptr = parse_reg(scan_ptr, line);
+                scan_ptr = parse_chr(scan_ptr, ',', line);
+                scan_ptr = parse_reg(scan_ptr, line);
                 break;
         };
         current_section->size += 4;
@@ -1216,6 +1222,16 @@ trans_inst_label(char *scan_ptr)
                 tmp = (int)tmp - (int)(current_section->size + current_section->offset);
                 *inst |= (tmp & 0x3FFFF) >> 2;
                 *inst |= 0x10000000;
+                break;
+            }
+        case I_NEGU:
+            {
+                scan_ptr = trans_reg(scan_ptr, &tmp);
+                *inst |= (tmp << 11);
+                scan_ptr = parse_chr(scan_ptr, ',', line);
+                scan_ptr = trans_reg(scan_ptr, &tmp);
+                *inst |= (tmp << 16);
+                *inst |= 0x00000023;
                 break;
             }
     }

@@ -17,5 +17,13 @@ init()
     *p = 0;
     free(p);
 
+    p = malloc(sizeof(int));
+    dbg_uart_hex((uint32_t)p);
+    *p = 1;
+
+    p = malloc(sizeof(int));
+    dbg_uart_hex((uint32_t)p);
+    *p = 2;
+
     __assert_fail();
 }

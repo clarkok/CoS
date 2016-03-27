@@ -2,6 +2,8 @@
 
 #include "slab.h"
 
+#define _mm_slab_level_size(level)  (1 << ((level) + SLAB_UNIT_SHIFT))
+
 void
 mm_slab_init(Slab *slab, SlabPageAlloc alloc_page, SlabPageFree free_page)
 {
@@ -32,12 +34,12 @@ _mm_slab_new_page(Slab *slab, int level)
     list_init(&page->free_list);
     page->level = level;
 
-    SlabSlice *slice = page->content,
+    SlabSlice *slice = (SlabSlice*)(((size_t)(page->content) + _mm_slab_level_size(level) - 1) & -_mm_slab_level_size(level)),
               *limit = (SlabSlice*)((size_t)(page->content) + (_mm_slab_slice_nr_in_page(level) << (level + SLAB_UNIT_SHIFT)));
 
     while (slice < limit) {
         list_append(&page->free_list, slice);
-        slice = (SlabSlice*)((size_t)slice + (1 << (level + SLAB_UNIT_SHIFT)));
+        slice = (SlabSlice*)((size_t)slice + _mm_slab_level_size(level));
     }
 
     return page;

@@ -6,6 +6,7 @@
 #include "test/utils/bits-test.c"
 #include "test/mm/buddy-test.c"
 #include "test/mm/slab-test.c"
+#include "test/mm/linked-buddy-test.c"
 
 int
 main()
@@ -18,6 +19,7 @@ main()
     CuSuiteAddSuite(suite, bits_test_suite());
     CuSuiteAddSuite(suite, mm_buddy_test_suite());
     CuSuiteAddSuite(suite, mm_slab_test_suite());
+    CuSuiteAddSuite(suite, mm_linked_buddy_test_suite());
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);

@@ -72,7 +72,7 @@ _mm_linked_buddy_get_level(size_t page_nr, int level_nr)
 
 static inline int
 _mm_linked_buddy_page_per_level(int level, int level_nr)
-{ return (1 << (level_nr - level)); }
+{ return (1 << (level_nr - level - 1)); }
 
 static inline void
 _mm_linked_buddy_insert_order(LinkedList *list, LinkedBuddyNode *node)
@@ -99,7 +99,8 @@ mm_linked_buddy_new(size_t page_nr)
     if (!lbuddy) return NULL;
 
     lbuddy->level_nr = level_nr;
-    lbuddy->free_nr = 1 << (level_nr);
+    lbuddy->free_nr = _mm_linked_buddy_page_per_level(0, level_nr);
+    sb_init(&lbuddy->allocated);
 
     for (int i = 0; i < level_nr; ++i) {
         list_init(lbuddy->head + i);
@@ -168,6 +169,8 @@ mm_linked_buddy_alloc(LinkedBuddy *lbuddy, size_t page_nr)
 
     int ret = node->start;
     free(node);
+
+    lbuddy->free_nr -= _mm_linked_buddy_page_per_level(level, lbuddy->level_nr);
     return ret;
 }
 
@@ -184,7 +187,9 @@ mm_linked_buddy_free(LinkedBuddy *lbuddy, int page)
     LinkedBuddyNode *node = _mm_linked_buddy_node_new(page);
     _mm_linked_buddy_insert_order(lbuddy->head + level, node);
 
-    while (true) {
+    lbuddy->free_nr += _mm_linked_buddy_page_per_level(level, lbuddy->level_nr);
+
+    while (1) {
         LinkedBuddyNode *buddy = NULL;
         int buddy_start = page ^ _mm_linked_buddy_page_per_level(level, lbuddy->level_nr);
 
@@ -211,6 +216,7 @@ mm_linked_buddy_free(LinkedBuddy *lbuddy, int page)
         if (buddy->start < node->start) {
             free(node);
             node = buddy;
+            page = buddy->start;
         }
         else {
             free(buddy);

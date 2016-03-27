@@ -494,6 +494,7 @@ parse_directive(char *scan_ptr, int *line, int alignment)
         strncmp(scan_ptr, ".fmask",     directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".frame",     directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".ident",     directive_limit - scan_ptr) == 0 ||
+        strncmp(scan_ptr, ".insn",      directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".local",     directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".mask",      directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".nan",       directive_limit - scan_ptr) == 0 ||
@@ -856,6 +857,7 @@ trans_directive(char *scan_ptr, int alignment)
         strncmp(scan_ptr, ".frame",     directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".globl",     directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".ident",     directive_limit - scan_ptr) == 0 ||
+        strncmp(scan_ptr, ".insn",      directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".local",     directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".mask",      directive_limit - scan_ptr) == 0 ||
         strncmp(scan_ptr, ".nan",       directive_limit - scan_ptr) == 0 ||

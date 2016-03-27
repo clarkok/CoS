@@ -5,7 +5,7 @@ OBJ_DIR = build/
 SRC_DIR = ./
 
 CORE_SRC 	= core/cos.c
-MM_SRC		= mm/mm.c mm/buddy.c mm/slab.c
+MM_SRC		= mm/mm.c mm/buddy.c mm/slab.c mm/linked-buddy.c
 UTILS_SRC	= utils/sb-tree.c
 PROC_SRC	= proc/proc.c
 SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC)

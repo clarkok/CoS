@@ -1448,12 +1448,21 @@ main(int argc, char **argv)
 
         fprintf(fp, "\tSECTION\tOFFSET\tABSOLUTE\n");
         while (label_table) {
+            /*
             fprintf(fp, 
                     "%.*s\t%.*s\t%u\t%u\n",
                     label_table->length, label_table->name,
                     label_table->section->length, label_table->section->name,
                     label_table->offset,
                     label_table->offset + label_table->section->offset
+                );
+            */
+            fprintf(fp,
+                    "%u\t%.*s\t%u\t%.*s\n",
+                    label_table->offset + label_table->section->offset,
+                    label_table->section->length, label_table->section->name,
+                    label_table->offset,
+                    label_table->length, label_table->name
                 );
             label_table = label_table->next;
         }

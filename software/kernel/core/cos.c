@@ -4,13 +4,13 @@
 #include "mm/mm.h"
 
 void __assert_fail();
+void interrupt_init();
 
 void
 init()
 {
-    dbg_uart_str("Kernel initializing\n");
+    // interrupt_init();
     mm_init();
-    dbg_uart_str("Kernel MM inited\n");
 
     __assert_fail();
 }

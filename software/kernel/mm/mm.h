@@ -7,6 +7,8 @@
 #include "core/cos.h"
 #include "utils/sb-tree.h"
 
+#include "linked-buddy.h"
+
 typedef struct PageDir
 {
     unsigned valid      : 1;
@@ -25,15 +27,6 @@ typedef struct PageEnt
 #define PAGE_PER_DIR    (PAGE_SIZE / sizeof(PageDir))
 #define MM_INVALID_PAGE (-1)
 
-typedef struct MMPageGroup
-{
-    SBNode _node;
-
-    size_t v_page_start;    // start page number in virtual memory
-    size_t p_page_start;    // start page number in physical memory
-    size_t page_count;      // number of pages
-} MMPageGroup;
-
 typedef struct MMFreeGroup
 {
     SBNode _node;
@@ -46,6 +39,7 @@ typedef struct MemoryManagement
 {
     PageDir *page_table;
     SBTree space_map;
+    LinkedBuddy *virtual_mem;
 } MemoryManagement;
 
 static_assert(sizeof(PageDir) == 4, "PageDir should be size of 4");

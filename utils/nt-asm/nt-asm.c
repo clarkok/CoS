@@ -60,23 +60,25 @@ enum {
     I_BNE   = 47,
     I_BLTZ  = 48,
     I_BGEZ  = 49,
+    I_BLEZ  = 50,
+    I_BGTZ  = 51,
 
-    I_SCALL = 50,
-    I_BREAK = 51,
-    I_ERET  = 52,
+    I_SCALL = 52,
+    I_BREAK = 53,
+    I_ERET  = 54,
 
-    I_MFC0  = 53,
-    I_MTC0  = 54,
+    I_MFC0  = 55,
+    I_MTC0  = 56,
 
-    I_SYNC  = 55,
+    I_SYNC  = 57,
 
     // pseudo insts
-    I_NOP   = 56,
-    I_MOVE  = 57,
-    I_BEQZ  = 58,
-    I_BNEZ  = 59,
-    I_NOT   = 60,
-    I_B     = 61,
+    I_NOP   = 58,
+    I_MOVE  = 59,
+    I_BEQZ  = 60,
+    I_BNEZ  = 61,
+    I_NOT   = 62,
+    I_B     = 63,
 
     NR_INST
 };
@@ -84,7 +86,7 @@ enum {
 const char INSTS_LITERIAL[] = 
     "lb lbu lh lhu lw ll sb sh sw sc addi addiu slti sltiu andi ori xori lui "
     "add addu sub subu slt sltu and or xor nor sll srl sra sllv srlv srav mult "
-    "multu div divu mfhi mthi mflo mtlo j jal jr jalr beq bne bltz bgez "
+    "multu div divu mfhi mthi mflo mtlo j jal jr jalr beq bne bltz bgez blez bgtz "
     "syscall break eret mfc0 mtc0 sync nop move beqz bnez not b"
     " ";
 
@@ -618,7 +620,8 @@ parse_inst_label(char *scan_ptr, int *line)
                     scan_ptr = parse_reg(scan_ptr, line);
                 }
                 break;
-            case I_BLTZ:    case I_BGEZ:    case I_BEQZ:    case I_BNEZ:
+            case I_BLTZ:    case I_BGEZ:    case I_BLEZ:    case I_BGTZ:
+            case I_BEQZ:    case I_BNEZ:
                 scan_ptr = parse_reg(scan_ptr, line);
                 scan_ptr = parse_chr(scan_ptr, ',', line);
                 scan_ptr = parse_imm(scan_ptr, line);
@@ -635,6 +638,7 @@ parse_inst_label(char *scan_ptr, int *line)
                 scan_ptr = parse_reg(scan_ptr, line);
                 scan_ptr = parse_chr(scan_ptr, ',', line);
                 scan_ptr = parse_reg(scan_ptr, line);
+                break;
             case I_B:
                 scan_ptr = parse_imm(scan_ptr, line);
                 break;
@@ -1141,7 +1145,8 @@ trans_inst_label(char *scan_ptr)
                 *inst |= 0x00000009;
                 break;
             }
-        case I_BLTZ:    case I_BGEZ:    case I_BEQZ:    case I_BNEZ:
+        case I_BLTZ:    case I_BGEZ:    case I_BLEZ:    case I_BGTZ:
+        case I_BEQZ:    case I_BNEZ:
             {
                 scan_ptr = trans_reg(scan_ptr, &tmp);
                 *inst |= (tmp << 21);
@@ -1153,6 +1158,8 @@ trans_inst_label(char *scan_ptr)
                 switch (sym->offset) {
                     case I_BLTZ:    *inst |= 0x04000000;    break;
                     case I_BGEZ:    *inst |= 0x04010000;    break;
+                    case I_BLEZ:    *inst |= 0x18000000;    break;
+                    case I_BGTZ:    *inst |= 0x1C000000;    break;
                     case I_BEQZ:    *inst |= 0x10000000;    break;
                     case I_BNEZ:    *inst |= 0x14000000;    break;
                 }

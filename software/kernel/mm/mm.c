@@ -18,6 +18,15 @@
 
 typedef LinkedNode MMPageForSlab;
 
+typedef struct MMPageGroup
+{
+    SBNode _node;
+
+    size_t v_page_start;    // start page number in virtual memory
+    size_t p_page_start;    // start page number in physical memory
+    size_t page_count;      // number of pages
+} MMPageGroup;
+
 #define MIN_PAGES_FOR_SLAB  8
 #define MAX_PAGES_FOR_SLAB  16
 static LinkedList pages_for_slab;
@@ -160,6 +169,8 @@ mm_init()
         pg->page_count = 1;
         _page_group_insert(&kernel_mm.space_map, pg);
     }
+
+    kernel_mm.virtual_mem = NULL;
 }
 
 void *
@@ -170,15 +181,13 @@ malloc(size_t size)
         int page = mm_buddy_alloc(&buddy, page_count);
         assert(page != MM_INVALID_PAGE);
 
-        for (int i = 0; i < page_count; ++i) {
-            _mm_set_kernel_page_table(
-                    kernel_mm.page_table,
-                    page + i + (KERNEL_START >> PAGE_SHIFT),
-                    page + i,
-                    1,
-                    1
-                );
-        }
+        _mm_set_kernel_page_table(
+                kernel_mm.page_table,
+                page + (KERNEL_START >> PAGE_SHIFT),
+                page,
+                page_count,
+                1
+            );
         MMPageGroup *pg = (MMPageGroup*)mm_slab_alloc(&kernel_slab, sizeof(MMPageGroup));
         pg->v_page_start = page + (KERNEL_START >> PAGE_SHIFT);
         pg->p_page_start = page;
@@ -190,7 +199,7 @@ malloc(size_t size)
     else {
         void *ret = mm_slab_alloc(&kernel_slab, size);
 
-        if (list_size(&pages_for_slab) < MIN_PAGES_FOR_SLAB) {
+        while (list_size(&pages_for_slab) < MIN_PAGES_FOR_SLAB) {
             int page = mm_buddy_alloc(&buddy, 1);
             assert(page != MM_INVALID_PAGE);
 
@@ -219,14 +228,31 @@ malloc(size_t size)
 void
 free(void *ptr)
 {
-    if ((size_t)ptr & (PAGE_SIZE - 1)) {
-        mm_slab_free(&kernel_slab, ptr);
-
-        if (list_size(&pages_for_slab) > MAX_PAGES_FOR_SLAB) {
-            // TODO free last page
-        }
+    if (!((size_t)ptr & (PAGE_SIZE - 1))) {
+        int page = ((size_t)ptr - KERNEL_START) >> PAGE_SHIFT;
+        MMPageGroup *pg = _page_group_find(&kernel_mm.space_map, page);
+        _mm_reset_kernel_page_table(
+                kernel_mm.page_table,
+                pg->v_page_start,
+                pg->page_count
+            );
+        sb_unlink(&pg->_node);
+        mm_slab_free(&kernel_slab, pg);
     }
     else {
-        // TODO free the page
+        mm_slab_free(&kernel_slab, ptr);
+
+        while (list_size(&pages_for_slab) > MAX_PAGES_FOR_SLAB) {
+            MMPageForSlab *page_for_slab = list_unlink(list_tail(&pages_for_slab));
+            int page = ((size_t)page_for_slab - KERNEL_START) >> PAGE_SHIFT;
+            MMPageGroup *pg = _page_group_find(&kernel_mm.space_map, page);
+            _mm_reset_kernel_page_table(
+                    kernel_mm.page_table,
+                    pg->v_page_start,
+                    pg->page_count
+                );
+            sb_unlink(&pg->_node);
+            mm_slab_free(&kernel_slab, pg);
+        }
     }
 }

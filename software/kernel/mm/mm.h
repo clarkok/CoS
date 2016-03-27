@@ -50,4 +50,7 @@ void mm_init();
 void *malloc(size_t size);
 void free(void *ptr);
 
+void mm_init_proc(MemoryManagement *mm);
+void mm_set_page_table(MemoryManagement *mm);
+
 #endif

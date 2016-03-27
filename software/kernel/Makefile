@@ -21,8 +21,10 @@ build/kernel.asm: build/kernel.bc
 	$(ASW) -o $@ $<
 
 build/kernel.bc: $(OBJECTS) ../libc/product/libc.bc
-	make -C ../libc
 	$(LK) -o $@ $^
+
+../libc/product/libc.bc:
+	make -C ../libc
 
 build/kernel-test.bc: $(OBJECTS)
 	$(LK) -o $@ $^

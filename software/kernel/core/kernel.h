@@ -6,7 +6,8 @@
 static inline void
 out_ptb(size_t ptb)
 {
-    __asm__ ("sync\n"
+    __asm__ volatile (
+            "sync\n"
              "\tmtc0 %0, 5"
              : : "r" (ptb)
         );
@@ -42,5 +43,7 @@ dbg_uart_hex(uint32_t x)
     dbg_uart_str(buffer);
     dbg_uart_str("\n");
 }
+
+void interrupt_reenter();
 
 #endif

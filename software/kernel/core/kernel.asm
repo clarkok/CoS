@@ -75,7 +75,8 @@ _kernel_panic_output_loop:
     addiu   $k1,    $k1,    1
 _kernel_panic_output_cmp:
     bnez    $t0,    _kernel_panic_output_loop
-    j       kernel_panic
+_kernel_panic_forever:
+    j       _kernel_panic_forever
 
     .section ".rodata"
 _KERNEL_RUNNING:

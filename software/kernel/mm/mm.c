@@ -1,9 +1,13 @@
+#include <string.h>
+
 #include "core/kernel.h"
+#include "core/cos.h"
 
 #include "utils/linked-list.h"
 
 #include "mm.h"
 #include "buddy.h"
+#include "linked-buddy.h"
 #include "slab.h"
 
 #define _MM_BUDDY_TREE_START    (BuddyNode *)(0x80400000)   // 4MB
@@ -86,12 +90,6 @@ static inline void
 _mm_set_kernel_page_table(PageDir *page_table, unsigned int v_page, unsigned int p_page, size_t page_nr, int we)
 {
     while (page_nr --) {
-        unsigned int dir = mm_get_dir_from_page(v_page);
-        if (!page_table[dir].valid) {
-            page_table[dir].page_ent = mm_get_kernel_dir_page(dir);
-            page_table[dir].valid = 1;
-        }
-
         PageEnt *ent = _mm_get_page_ent_from_v_page(page_table, v_page);
         ent->valid = 1;
         ent->we = we;
@@ -130,11 +128,21 @@ mm_init()
 {
     int page_for_slab[MAX_PAGES_FOR_SLAB];
 
+    // initial buddy
     buddy.tree = _MM_BUDDY_TREE_START;
     mm_buddy_init(&buddy, _MM_BUDDY_RESERVED);
 
+    // initial kernel page table
     kernel_mm.page_table = _MM_KERNEL_PTB;
 
+    // map kernel page_dir to first 1MB
+    for (size_t i = 0; i < (KERNEL_SPACE_SIZE / PAGE_PER_DIR / PAGE_SIZE); ++i) {
+        kernel_mm.page_table[i + (KERNEL_START / PAGE_PER_DIR / PAGE_SIZE)].page_ent = i;
+        kernel_mm.page_table[i + (KERNEL_START / PAGE_PER_DIR / PAGE_SIZE)].valid = 1;
+    }
+    out_ptb((size_t)kernel_mm.page_table - DIRECT_MAPPED_START);
+
+    // initial pages for slab
     list_init(&pages_for_slab);
     for (int i = 0; i < MAX_PAGES_FOR_SLAB; ++i) {
         page_for_slab[i] = mm_buddy_alloc(&buddy, 1);
@@ -152,16 +160,20 @@ mm_init()
         list_append(&pages_for_slab, page);
     }
 
+    // initial slab
     mm_slab_init(&kernel_slab, _mm_page_alloc_for_slab, _mm_page_free_for_slab);
 
+    // initial kernel space_map
     sb_init(&kernel_mm.space_map);
 
+    // register reserved pages in kernel_mm.space_map
     MMPageGroup *pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
     pg->v_page_start = (KERNEL_START >> PAGE_SHIFT);
     pg->p_page_start = 0;
     pg->page_count = _MM_BUDDY_RESERVED;
     _page_group_insert(&kernel_mm.space_map, pg);
 
+    // register all pre-allocated pages for slab in kernel_mm.space_map
     for (int i = 0; i < MAX_PAGES_FOR_SLAB; ++i) {
         pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
         pg->v_page_start = (KERNEL_START >> PAGE_SHIFT) + page_for_slab[i];
@@ -170,6 +182,7 @@ mm_init()
         _page_group_insert(&kernel_mm.space_map, pg);
     }
 
+    // set kernel_mm.virtual_mem to NULL
     kernel_mm.virtual_mem = NULL;
 }
 
@@ -255,4 +268,22 @@ free(void *ptr)
             mm_slab_free(&kernel_slab, pg);
         }
     }
+}
+
+void
+mm_init_proc(MemoryManagement *mm)
+{
+    int page_table = mm_buddy_alloc(&buddy, 1);
+    mm->page_table = (PageDir*)(DIRECT_MAPPED_START + (page_table << PAGE_SHIFT));
+    memcpy(mm->page_table + KERNEL_START_PAGE, kernel_mm.page_table + KERNEL_START_PAGE, sizeof(PageDir) * KERNEL_PAGE_NUMBER);
+
+    sb_init(&mm->space_map);
+    mm->virtual_mem = mm_linked_buddy_new(USER_SPACE_SIZE);
+}
+
+void
+mm_set_page_table(MemoryManagement *mm)
+{
+    assert((size_t)mm->page_table >= DIRECT_MAPPED_START);
+    out_ptb((size_t)mm->page_table - DIRECT_MAPPED_START);
 }

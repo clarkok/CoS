@@ -55,6 +55,7 @@ interrupt_entry:
 
     jalr    $k1
 
+interrupt_reenter:
     lui     $k0,    %hi(proc_current_scene)
     lw      $k0,    %lo(proc_current_scene)($k0)    ## load proc_current_scene again
 

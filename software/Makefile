@@ -21,3 +21,4 @@ clean:
 	rm -f bios.coe
 	make -C boot clean
 	make -C kernel clean
+	make -C libc clean

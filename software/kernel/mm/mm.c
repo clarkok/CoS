@@ -3,6 +3,7 @@
 #include "core/cos.h"
 
 #include "utils/linked-list.h"
+#include "proc/proc.h"
 
 #include "mm.h"
 #include "buddy.h"
@@ -20,6 +21,9 @@
 
 #define mm_get_direct_page_ptr(page)    (void*)((DIRECT_MAPPED_START + (page << PAGE_SHIFT)))
 #define mm_get_direct_page_id(ptr)      (((size_t)ptr - DIRECT_MAPPED_START) >> PAGE_SHIFT)
+
+#define mm_get_page_ptr(v_page)         (void*)((v_page) << PAGE_SHIFT)
+#define mm_get_page_id(ptr)             ((size_t)ptr >> PAGE_SHIFT)
 
 typedef LinkedNode MMPageForSlab;
 
@@ -123,6 +127,8 @@ _mm_reset_kernel_page_table(PageDir *page_table, unsigned int v_page, size_t pag
 static inline void
 _mm_set_page_table(PageDir *page_table, unsigned int v_page, unsigned int p_page, size_t page_nr, int we)
 {
+    assert(v_page < KERNEL_START_PAGE);
+
     while (page_nr --) {
         unsigned int dir = mm_get_dir_from_page(v_page);
         if (!page_table[dir].valid) {
@@ -328,8 +334,13 @@ void
 mm_init_proc(MemoryManagement *mm)
 {
     mm->page_table = (PageDir*)mm_get_direct_page_ptr(mm_buddy_alloc(&buddy, 1));
+    assert((size_t)mm->page_table >= DIRECT_MAPPED_START);
     memset(mm->page_table, 0, PAGE_SIZE);
-    memcpy(mm->page_table + KERNEL_START_PAGE, kernel_mm.page_table + KERNEL_START_PAGE, sizeof(PageDir) * KERNEL_PAGE_NUMBER);
+    memcpy(
+            mm->page_table + KERNEL_START_PAGE / PAGE_PER_DIR,
+            kernel_mm.page_table + KERNEL_START_PAGE / PAGE_PER_DIR,
+            sizeof(PageDir) * KERNEL_PAGE_NUMBER / PAGE_PER_DIR
+        );
 
     sb_init(&mm->page_groups);
     mm->virtual_mem = mm_linked_buddy_new(USER_SPACE_SIZE);
@@ -415,7 +426,76 @@ mm_duplicate(MemoryManagement *dst, MemoryManagement *src)
 void
 mm_set_page_table(MemoryManagement *mm)
 {
-    assert((size_t)mm->page_table >= DIRECT_MAPPED_START);
-    out_ptb((size_t)mm->page_table - DIRECT_MAPPED_START);
+    assert((size_t)mm->page_table >= (size_t)DIRECT_MAPPED_START);
+    out_ptb((size_t)mm->page_table - (size_t)DIRECT_MAPPED_START);
 }
 
+void *
+mm_do_mmap_empty(size_t size, size_t hint)
+{
+    // FIXME protect with lock
+
+    MemoryManagement *mm = &current_process->mm;
+
+    int page_nr = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+    int p_page = mm_buddy_alloc(&buddy, page_nr);
+    if (p_page == MM_INVALID_PAGE) { return NULL; }
+
+    int v_page;
+    if ((int)hint == MM_INVALID_PAGE) {
+        v_page = mm_linked_buddy_alloc(mm->virtual_mem, page_nr);
+    }
+    else {
+        v_page = mm_linked_buddy_alloc_hint(mm->virtual_mem, page_nr, hint >> PAGE_SHIFT);
+    }
+
+    if (v_page == MM_INVALID_PAGE) {
+        mm_buddy_free(&buddy, p_page);
+        return NULL;
+    }
+
+    MMPageGroup *pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
+    pg->v_page_start = v_page;
+    pg->p_page_start = p_page;
+    pg->page_count = page_nr;
+    pg->type = MM_EMPTY;
+
+    _mm_page_group_insert(&mm->page_groups, pg);
+
+    _mm_set_page_table(mm->page_table, v_page, p_page, page_nr, 1);
+
+    mm_update_mmu();
+    return mm_get_page_ptr(v_page);
+}
+
+void
+mm_do_munmap(void *ptr)
+{
+    // FIXME protect with lock
+    MemoryManagement *mm = &current_process->mm;
+
+    int v_page = mm_get_page_id(ptr);
+    MMPageGroup *pg = _mm_page_group_find(&mm->page_groups, v_page);
+    if (!pg) { return; }
+
+    mm_linked_buddy_free(mm->virtual_mem, pg->v_page_start);
+
+    switch (pg->type) {
+        case MM_COW:
+            {
+                if (!mm_shared_rm_ref(pg->i_shared_page)) {
+                    mm_buddy_free(&buddy, pg->p_page_start);
+                }
+                break;
+            }
+        case MM_EMPTY: break;
+        default: assert(false);
+    }
+
+    _mm_reset_page_table(mm->page_table, pg->v_page_start, pg->page_count);
+
+    sb_unlink(&pg->_node);
+    free(pg);
+
+    mm_update_mmu();
+}

@@ -29,6 +29,7 @@ typedef struct ProcScene
     size_t regs[31];
     size_t lo;
     size_t hi;
+    uint8_t kernel_stack[PAGE_SIZE];
 } ProcScene;
 
 #define PROC_NAME_LENGTH 11

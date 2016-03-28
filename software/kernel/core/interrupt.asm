@@ -46,6 +46,16 @@ interrupt_entry:
     mfhi    $k1
     sw      $k1,    132($k0)
 
+    lui     $k0,    0x8000
+    and     $k1,    $k0,    $sp
+    bnez    $k1,    _interrupt_not_set_stack
+    
+    ## set $sp to kernel_stack
+    lui     $k0,    %hi(proc_current_scene)
+    lw      $k0,    %lo(proc_current_scene)($k0)
+    addiu   $sp,    $k0,    4232
+
+_interrupt_not_set_stack:
     mfc0    $k1,    1                               ## get ecause
     lui     $k0,    %hi(INTERRUPT_HANDLER_TABLE)
     andi    $k1,    $k1,    15

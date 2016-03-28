@@ -124,11 +124,17 @@ proc_init()
     _proc_insert_into_queues(init_proc);
 
     proc_current_scene = &init_proc->scene;
+    proc_schedule();    // update states
+
+    proc_current_scene->regs[29] = (size_t)mm_do_mmap_empty(PAGE_SIZE, USER_SPACE_SIZE - PAGE_SIZE) 
+                                        - PAGE_SIZE;   // allocate stack space
 }
 
 void
 proc_schedule()
 {
+    dbg_uart_str("schedule ");
+
     Process *proc_to_run = NULL;
     if (list_size(&proc_realtime_queue)) {
         proc_to_run = list_get(list_head(&proc_realtime_queue), Process, _link);
@@ -171,10 +177,12 @@ proc_schedule()
 
     assert(proc_to_run);
 
-    if (proc_to_run != current_process) {
-        mm_set_page_table(&proc_to_run->mm);
-        proc_current_scene = &proc_to_run->scene;
-    }
+    mm_set_page_table(&proc_to_run->mm);
+    proc_current_scene = &proc_to_run->scene;
+
+    dbg_uart_str("to ");
+    dbg_uart_str(proc_to_run->name);
+    dbg_uart_str("\n");
 }
 
 int

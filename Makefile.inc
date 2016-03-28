@@ -4,7 +4,7 @@ UTILS_DIR=$(PROJECT_PATH)/utils
 
 INCLUDE_FLAGS=-isystem $(PROJECT_PATH)/software/libc/ -I .
 
-KERNEL_FLAGS=-O3 -emit-llvm -c -Wall -nodefaultlibs -Wno-gcc-compat -Wno-unused-function -Wno-incompatible-library-redeclaration -nostdlib -m32 $(INCLUDE_FLAGS)
+KERNEL_FLAGS=-emit-llvm -c -Wall -nodefaultlibs -Wno-gcc-compat -Wno-unused-function -Wno-incompatible-library-redeclaration -nostdlib -m32 $(INCLUDE_FLAGS)
 LIBC_FLAGS=-fno-builtin -ffreestanding $(KERNEL_FLAGS)
 
 CC=clang-3.8 

@@ -5,6 +5,8 @@
 
 #include "proc.h"
 
+#define proc_kernel_thread(func)    (((size_t)(func)) + 1)
+
 volatile ProcScene *proc_current_scene;
 SBTree proc_tree;
 
@@ -52,6 +54,34 @@ _proc_find(SBTree *tree, size_t id)
 }
 
 static void
+_proc_insert_into_queues(Process *proc)
+{
+    if (proc->priv_base >= PRIV_REALTIME) {
+        Process *ptr = list_get(list_head(&proc_realtime_queue), Process, _link);
+        while (ptr && ptr->priv_base >= proc->priv_base) {
+            ptr = list_get(list_next(&ptr->_link), Process, _link);
+        }
+        if (ptr) {
+            list_before(&ptr->_link, &proc->_link);
+        }
+        else {
+            list_append(&proc_realtime_queue, &proc->_link);
+        }
+    }
+    else if (proc->priv_base >= PRIV_NORMAL) {
+        if (proc->ticks) {
+            list_append(&proc_normal_queue, &proc->_link);
+        }
+        else {
+            list_append(&proc_normal_noticks_queue, &proc->_link);
+        }
+    }
+    else {
+        list_append(&proc_zero_queue, &proc->_link);
+    }
+}
+
+static void
 init_proc()
 {
     dbg_uart_str("init process running\n");
@@ -72,7 +102,7 @@ _proc_construct_init()
 
     mm_init_proc(&new_proc->mm);
     memset((void*)(&new_proc->scene), 0, sizeof(ProcScene));
-    new_proc->scene.pc = (size_t)&init_proc;
+    new_proc->scene.pc = proc_kernel_thread(init_proc);
 
     return new_proc;
 }
@@ -91,7 +121,7 @@ proc_init()
     Process *init_proc = _proc_construct_init();
     _proc_insert(&proc_tree, init_proc);
 
-    list_append(&proc_normal_queue, &init_proc->_link);
+    _proc_insert_into_queues(init_proc);
 
     proc_current_scene = &init_proc->scene;
 }
@@ -145,4 +175,25 @@ proc_schedule()
         mm_set_page_table(&proc_to_run->mm);
         proc_current_scene = &proc_to_run->scene;
     }
+}
+
+int
+proc_do_fork()
+{
+    Process *current = current_process;
+    Process *new_proc = malloc(sizeof(Process));
+
+    new_proc->id = ++_proc_id;
+    new_proc->state = PS_READY;
+    strncpy(new_proc->name, current->name, PROC_NAME_LENGTH);
+    new_proc->priv_base = current->priv_base;
+    new_proc->priv_offset = 0;
+    new_proc->ticks = current->ticks >> 1;
+    current->ticks -= new_proc->ticks;
+
+    mm_duplicate(&new_proc->mm, &current->mm);
+    memcpy((void*)&new_proc->scene, (void*)&current->scene, sizeof(ProcScene));
+    new_proc->scene.regs[2] = 0;    // set $v0 to 0
+
+    return new_proc->id;
 }

@@ -9,7 +9,9 @@ include ../../Makefile.inc
 product/libc.bc: $(OBJECTS)
 	$(LK) -o $@ $^
 
-$(foreach i,$(SOURCES),$(eval $(call COMPILE_MACRO,$(i))))
+LIBC_CC = $(CC) $(LIBC_FLAGS)
+
+$(foreach i,$(SOURCES),$(eval $(call COMPILE_MACRO,$(i),$(LIBC_CC))))
 
 -include $(DEP_DIR)*.P
 

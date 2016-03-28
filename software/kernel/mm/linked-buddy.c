@@ -112,6 +112,40 @@ mm_linked_buddy_new(size_t page_nr)
     return lbuddy;
 }
 
+LinkedBuddy *
+mm_linked_buddy_dup(LinkedBuddy *lbuddy)
+{
+    LinkedBuddy *ret = (LinkedBuddy*)malloc(sizeof(LinkedBuddy) + sizeof(LinkedList) * lbuddy->level_nr);
+    if (!ret) return NULL;
+
+    ret->level_nr = lbuddy->level_nr;
+    ret->free_nr = lbuddy->free_nr;
+
+    sb_for_each(&lbuddy->allocated, node) {
+        LinkedBuddyAllocated *allocated = sb_get(node, LinkedBuddyAllocated, _node);
+        LinkedBuddyAllocated *new_alloc = malloc(sizeof(LinkedBuddyAllocated));
+
+        new_alloc->start = allocated->start;
+        new_alloc->level = allocated->level;
+
+        _mm_linked_buddy_allocated_insert(&ret->allocated, new_alloc);
+    }
+
+    for (int i = 0; i < lbuddy->level_nr; ++i) {
+        list_init(ret->head + i);
+
+        list_for_each(lbuddy->head + i, node) {
+            LinkedBuddyNode *buddy_node = list_get(node, LinkedBuddyNode, _link),
+                            *new_node = malloc(sizeof(LinkedBuddyNode));
+
+            new_node->start = buddy_node->start;
+            list_append(ret->head + i, &new_node->_link);
+        }
+    }
+
+    return ret;
+}
+
 void
 mm_linked_buddy_destroy(LinkedBuddy *lbuddy)
 {

@@ -83,4 +83,6 @@ extern SBTree proc_tree;
 void proc_init();
 void proc_schedule();
 
+int proc_do_fork();
+
 #endif

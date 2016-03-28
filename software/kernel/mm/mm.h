@@ -5,6 +5,8 @@
 #include <assert.h>
 
 #include "core/cos.h"
+#include "core/kernel.h"
+
 #include "utils/sb-tree.h"
 
 #include "linked-buddy.h"
@@ -27,18 +29,15 @@ typedef struct PageEnt
 #define PAGE_PER_DIR    (PAGE_SIZE / sizeof(PageDir))
 #define MM_INVALID_PAGE (-1)
 
-typedef struct MMFreeGroup
-{
-    SBNode _node;
-
-    size_t v_page_start;
-    size_t v_page_count;
-} MMFreeGroup;
+typedef enum MMapType{
+    MM_EMPTY,       // map to empty physical memory
+    MM_COW,         // copy on write
+} MMapType;
 
 typedef struct MemoryManagement
 {
     PageDir *page_table;
-    SBTree space_map;
+    SBTree page_groups;
     LinkedBuddy *virtual_mem;
 } MemoryManagement;
 
@@ -51,6 +50,11 @@ void *malloc(size_t size);
 void free(void *ptr);
 
 void mm_init_proc(MemoryManagement *mm);
+void mm_duplicate(MemoryManagement *dst, MemoryManagement *src);
 void mm_set_page_table(MemoryManagement *mm);
+
+static inline void
+mm_update_mmu()
+{ out_ptb(in_ptb()); }
 
 #endif

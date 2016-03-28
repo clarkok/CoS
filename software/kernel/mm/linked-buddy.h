@@ -28,6 +28,8 @@ typedef struct LinkedBuddy
 } LinkedBuddy;
 
 LinkedBuddy *mm_linked_buddy_new(size_t page_nr);
+LinkedBuddy *mm_linked_buddy_dup(LinkedBuddy *lbuddy);
+
 void mm_linked_buddy_destroy(LinkedBuddy *lbuddy);
 int mm_linked_buddy_alloc(LinkedBuddy *lbuddy, size_t page_nr);
 void mm_linked_buddy_free(LinkedBuddy *lbuddy, int page);

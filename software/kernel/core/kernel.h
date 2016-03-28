@@ -3,6 +3,23 @@
 
 #include <stddef.h>
 
+#ifdef assert
+#undef assert
+#endif
+
+void kernel_panic();
+
+#define __assert_failed(file, line, cond)               \
+    do {                                                \
+        dbg_uart_str("\nAssert Failed!\n" cond "\n");   \
+        dbg_uart_str(file ":0x");                       \
+        dbg_uart_hex(line);                             \
+        kernel_panic();                                 \
+    } while (0)
+
+#define assert(cond)                        \
+    do { if (!(cond)) __assert_failed(__FILE__, __LINE__, #cond); } while (0)
+
 static inline void
 out_ptb(size_t ptb)
 {
@@ -11,6 +28,17 @@ out_ptb(size_t ptb)
              "\tmtc0 %0, 5"
              : : "r" (ptb)
         );
+}
+
+static inline size_t
+in_ptb()
+{
+    size_t ptb;
+    __asm__ volatile (
+            "mfc0 %0, 5"
+            : "=r"(ptb):
+        );
+    return ptb;
 }
 
 static inline void

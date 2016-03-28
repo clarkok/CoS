@@ -5,7 +5,7 @@ OBJ_DIR = build/
 SRC_DIR = ./
 
 CORE_SRC 	= core/cos.c
-MM_SRC		= mm/mm.c mm/buddy.c mm/slab.c mm/linked-buddy.c
+MM_SRC		= mm/mm.c mm/buddy.c mm/slab.c mm/linked-buddy.c mm/shared.c
 UTILS_SRC	= utils/sb-tree.c
 PROC_SRC	= proc/proc.c
 SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC)
@@ -13,6 +13,8 @@ SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC)
 include ../../Makefile.inc
 
 TEST_SRC 	= utils/sb-tree.c mm/buddy.c mm/slab.c mm/linked-buddy.c
+
+KERNEL_CC 	= $(CC) $(KERNEL_FLAGS)
 
 product/kernel.img: $(CORE_ASM) build/kernel.asm
 	$(AS) -l 274432 -o $@ -O 2148532224 -m product/kernel.map $^
@@ -29,7 +31,7 @@ build/kernel.bc: $(OBJECTS) ../libc/product/libc.bc
 build/kernel-test.bc: $(OBJECTS)
 	$(LK) -o $@ $^
 
-$(foreach i,$(SOURCES),$(eval $(call COMPILE_MACRO,$(i))))
+$(foreach i,$(SOURCES),$(eval $(call COMPILE_MACRO,$(i),$(KERNEL_CC))))
 
 -include $(DEP_DIR)*.P
 

@@ -208,6 +208,78 @@ mm_linked_buddy_alloc(LinkedBuddy *lbuddy, size_t page_nr)
     return ret;
 }
 
+static inline LinkedBuddyNode *
+_mm_linked_buddy_search_hint(LinkedBuddy *lbuddy, int level, int start)
+{
+    list_for_each(lbuddy->head + level, node) {
+        if (list_get(node, LinkedBuddyNode, _link)->start == start) {
+            return list_get(node, LinkedBuddyNode, _link);
+        }
+    }
+    return NULL;
+}
+
+static inline int
+_mm_linked_buddy_align_hint(LinkedBuddy *lbuddy, int level, int hint)
+{ return hint & -_mm_linked_buddy_page_per_level(level, lbuddy->level_nr); }
+
+int
+mm_linked_buddy_alloc_hint(LinkedBuddy *lbuddy, size_t page_nr, int hint)
+{
+    int level = _mm_linked_buddy_get_level(page_nr, lbuddy->level_nr);
+    if (level < 0)                      { return MM_INVALID_PAGE; }
+    if (page_nr > lbuddy->free_nr)      { return MM_INVALID_PAGE; }
+
+    hint = _mm_linked_buddy_align_hint(lbuddy, level, hint);
+    LinkedBuddyNode *node = _mm_linked_buddy_search_hint(lbuddy, level, hint);
+    if (!node) {
+        int tmp_level = level - 1;
+        int tmp_hint = hint;
+        LinkedBuddyNode *tmp_node;
+
+        while (tmp_level >= 0) {
+            tmp_hint = _mm_linked_buddy_align_hint(lbuddy, tmp_level, tmp_hint);
+            tmp_node = _mm_linked_buddy_search_hint(lbuddy, tmp_level, tmp_hint);
+
+            if (tmp_node) break;
+            --tmp_level;
+        }
+
+        if (tmp_level < 0) return MM_INVALID_PAGE;
+
+        list_unlink(&tmp_node->_link);
+        do {
+            ++tmp_level;
+            LinkedBuddyNode *new_node = _mm_linked_buddy_node_new(
+                    tmp_node->start + _mm_linked_buddy_page_per_level(tmp_level, lbuddy->level_nr)
+                );
+            if (hint < new_node->start) {
+                _mm_linked_buddy_insert_order(lbuddy->head + tmp_level, new_node);
+            }
+            else {
+                _mm_linked_buddy_insert_order(lbuddy->head + tmp_level, tmp_node);
+                tmp_node = new_node;
+            }
+        } while (tmp_level < level);
+        node = tmp_node;
+    }
+    else {
+        list_unlink(&node->_link);
+    }
+
+    LinkedBuddyAllocated *allocated = _mm_linked_buddy_allocated_new(
+            node->start,
+            level
+        );
+    _mm_linked_buddy_allocated_insert(&lbuddy->allocated, allocated);
+
+    int ret = node->start;
+    free(node);
+
+    lbuddy->free_nr -= _mm_linked_buddy_page_per_level(level, lbuddy->level_nr);
+    return ret;
+}
+
 void
 mm_linked_buddy_free(LinkedBuddy *lbuddy, int page)
 {

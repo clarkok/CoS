@@ -38,7 +38,7 @@ $(foreach i,$(SOURCES),$(eval $(call COMPILE_MACRO,$(i),$(KERNEL_CC))))
 .PHONY: clean test
 
 test: build/kernel-test.bc test/test.c
-	$(TEST_CC) -Ithird_party/cutest/ -o test/test test/test.c third_party/cutest/CuTest.c $(TEST_SRC)
+	$(TEST_CC) -D__TEST__ -Ithird_party/cutest/ -o test/test test/test.c third_party/cutest/CuTest.c $(TEST_SRC)
 	./test/test
 
 clean:

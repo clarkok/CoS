@@ -50,6 +50,7 @@ void *malloc(size_t size);
 void free(void *ptr);
 
 void mm_init_proc(MemoryManagement *mm);
+void mm_destroy_proc(MemoryManagement *mm);
 void mm_duplicate(MemoryManagement *dst, MemoryManagement *src);
 void mm_set_page_table(MemoryManagement *mm);
 

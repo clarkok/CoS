@@ -32,6 +32,7 @@ LinkedBuddy *mm_linked_buddy_dup(LinkedBuddy *lbuddy);
 
 void mm_linked_buddy_destroy(LinkedBuddy *lbuddy);
 int mm_linked_buddy_alloc(LinkedBuddy *lbuddy, size_t page_nr);
+int mm_linked_buddy_alloc_hint(LinkedBuddy *lbuddy, size_t page_nr, int hint);
 void mm_linked_buddy_free(LinkedBuddy *lbuddy, int page);
 
 #endif

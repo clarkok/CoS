@@ -19,6 +19,7 @@
 #define mm_get_ent_from_page(page)  ((page) & ((1 << 10) - 1))
 
 #define mm_get_direct_page_ptr(page)    (void*)((DIRECT_MAPPED_START + (page << PAGE_SHIFT)))
+#define mm_get_direct_page_id(ptr)      (((size_t)ptr - DIRECT_MAPPED_START) >> PAGE_SHIFT)
 
 typedef LinkedNode MMPageForSlab;
 
@@ -335,6 +336,45 @@ mm_init_proc(MemoryManagement *mm)
 }
 
 void
+mm_destroy_proc(MemoryManagement *mm)
+{
+    mm_linked_buddy_destroy(mm->virtual_mem);
+
+    for (SBNode *node = sb_head(&mm->page_groups); node; ) {
+        MMPageGroup *pg = sb_get(node, MMPageGroup, _node);
+
+        switch (pg->type) {
+            case MM_EMPTY:
+                {
+                    mm_buddy_free(&buddy, pg->p_page_start);
+                    break;
+                }
+            case MM_COW:
+                {
+                    if (!mm_shared_rm_ref(pg->i_shared_page)) {
+                        mm_buddy_free(&buddy, pg->p_page_start);
+                    }
+                    break;
+                }
+            default:
+                assert(false);
+        }
+
+        SBNode *next = sb_next(node);
+        free(sb_unlink(node));
+        node = next;
+    }
+
+    for (size_t i = 0; i < KERNEL_START_PAGE; ++i) {
+        if (mm->page_table[i].valid) {
+            mm_buddy_free(&buddy, mm->page_table[i].page_ent);
+        }
+    }
+
+    mm_buddy_free(&buddy, mm_get_direct_page_id(mm->page_table));
+}
+
+void
 mm_duplicate(MemoryManagement *dst, MemoryManagement *src)
 {
     mm_init_proc(dst);
@@ -352,6 +392,7 @@ mm_duplicate(MemoryManagement *dst, MemoryManagement *src)
             case MM_COW:
                 {
                     MMPageGroup *new_pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
+                    assert(new_pg);
                     new_pg->v_page_start = pg->v_page_start;
                     new_pg->p_page_start = pg->p_page_start;
                     new_pg->page_count = pg->page_count;
@@ -364,7 +405,7 @@ mm_duplicate(MemoryManagement *dst, MemoryManagement *src)
                     break;
                 }
             default:
-                assert("Should not get here" && false);
+                assert(false);
         }
     }
 

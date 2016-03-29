@@ -114,27 +114,6 @@ interrupt_hardware_reset_handler:
     addiu   $k0,    $zero,  0xF000
     jr      $k0
 
-interrupt_unexpected_pagefault_handler:
-    lui     $a0,    %hi(INTERRUPT_UNEXPECTED_PAGE_FAULT)
-    addiu   $a0,    $a0,    %lo(INTERRUPT_UNEXPECTED_PAGE_FAULT)
-    jal     interrupt_uart_str
-
-    mfc0    $a0,    0
-    jal     interrupt_uart_hex
-
-    lui     $a0,    %hi(INTERRUPT_UNEXPECTED_PAGE_FAULT_PFA)
-    addiu   $a0,    $a0,    %lo(INTERRUPT_UNEXPECTED_PAGE_FAULT_PFA)
-    jal     interrupt_uart_str
-
-    mfc0    $a0,    6
-    jal     interrupt_uart_hex
-
-    lui     $a0,    %hi(INTERRUPT_RETURN_LINE)
-    addiu   $a0,    $a0,    %lo(INTERRUPT_RETURN_LINE)
-    jal     interrupt_uart_str
-
-    j       kernel_panic
-
 interrupt_unexpected_exception_handler:
     lui     $a0,    %hi(INTERRUPT_UNEXPECTED_EXCEPTION)
     addiu   $a0,    $a0,    %lo(INTERRUPT_UNEXPECTED_EXCEPTION)
@@ -196,7 +175,7 @@ _interrupt_uart_hex_cmp:
     .data
 INTERRUPT_HANDLER_TABLE:
     .4byte  (interrupt_hardware_reset_handler)                  ## hardware reset
-    .4byte  (interrupt_unexpected_pagefault_handler)            ## pagefault
+    .4byte  (mm_pagefault_handler)                              ## pagefault
     .4byte  (interrupt_default_handler)                         ## vga
     .4byte  (interrupt_default_handler)                         ## flash
     .4byte  (interrupt_default_handler)                         ## uart

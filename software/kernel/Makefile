@@ -8,7 +8,8 @@ CORE_SRC 	= core/cos.c
 MM_SRC		= mm/mm.c mm/buddy.c mm/slab.c mm/linked-buddy.c mm/shared.c
 UTILS_SRC	= utils/sb-tree.c
 PROC_SRC	= proc/proc.c
-SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC)
+DRIVER_SRC	= driver/driver.c driver/timer.c
+SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC) $(DRIVER_SRC)
 
 include ../../Makefile.inc
 

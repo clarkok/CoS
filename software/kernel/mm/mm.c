@@ -87,6 +87,36 @@ _mm_page_group_find(SBTree *tree, size_t v_page)
     return NULL;
 }
 
+static MMPageGroup *
+_mm_page_group_lookup(SBTree *tree, size_t v_page)
+{
+    SBNode *ptr = sb_root(tree);
+
+    while (ptr) {
+        MMPageGroup *node = sb_get(ptr, MMPageGroup, _node);
+        if (node->v_page_start <= v_page &&
+            node->v_page_start + node->page_count > v_page) return node;
+        if (node->v_page_start > v_page) {
+            if (ptr->left) {
+                ptr = ptr->left;
+            }
+            else if (!(ptr = sb_prev(ptr))) {
+                return NULL;
+            }
+        }
+        else {
+            if (ptr->right) {
+                ptr = ptr->right;
+            }
+            else if (!(ptr = sb_next(ptr))) {
+                return NULL;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 static inline PageEnt *
 _mm_get_page_ent_from_v_page(PageDir *page_table, unsigned int v_page)
 {
@@ -498,4 +528,57 @@ mm_do_munmap(void *ptr)
     free(pg);
 
     mm_update_mmu();
+}
+
+void
+mm_pagefault_handler()
+{
+    size_t pagefault_addr = in_pfa();
+    MemoryManagement *mm = &current_process->mm;
+
+    if (pagefault_addr >= USER_SPACE_SIZE) {
+        dbg_uart_str("Kernel Pagefault!\n");
+        dbg_uart_str("PFA: ");
+        dbg_uart_hex(pagefault_addr);
+        kernel_panic();
+    }
+
+    MMPageGroup *pg = _mm_page_group_lookup(&mm->page_groups, pagefault_addr >> PAGE_SHIFT);
+
+    if (!pg) {
+        // TODO terminate current_process
+        assert(false && "Should terminate current process");
+    }
+
+    switch (pg->type) {
+        case MM_EMPTY:
+            // TODO terminate current_process
+            assert(false && "Should terminate current process");
+            break;
+        case MM_COW:
+            if (pg->i_shared_page->ref_count == 1) {
+                mm_shared_rm_ref(pg->i_shared_page);
+                pg->type = MM_EMPTY;
+                _mm_set_page_table(mm->page_table, pg->v_page_start, pg->p_page_start, pg->page_count, 1);
+            }
+            else {
+                mm_shared_rm_ref(pg->i_shared_page);
+                int new_pages = mm_buddy_alloc(&buddy, pg->page_count);
+                assert(new_pages != MM_INVALID_PAGE);
+
+                memcpy(
+                        mm_get_direct_page_ptr(new_pages),
+                        mm_get_direct_page_ptr(pg->p_page_start),
+                        pg->page_count << PAGE_SHIFT
+                    );
+
+                _mm_reset_page_table(mm->page_table, pg->v_page_start, pg->page_count);
+                pg->p_page_start = new_pages;
+                _mm_set_page_table(mm->page_table, pg->v_page_start, pg->p_page_start, pg->page_count, 1);
+            }
+            mm_update_mmu();
+            break;
+        default:
+            assert(false);
+    }
 }

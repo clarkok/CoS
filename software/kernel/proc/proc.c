@@ -140,7 +140,8 @@ proc_schedule()
         proc_to_run = list_get(list_head(&proc_realtime_queue), Process, _link);
     }
     else if (list_size(&proc_normal_queue)) {
-        if (list_from_node(&current_process->_link) == &proc_normal_queue) {
+        if (list_from_node(&current_process->_link) == &proc_normal_queue &&
+            list_next(&current_process->_link)) {
             proc_to_run = list_get(list_next(&current_process->_link), Process, _link);
         }
         else {
@@ -167,7 +168,8 @@ proc_schedule()
         }
     }
     else {
-        if (list_from_node(&current_process->_link) == &proc_zero_queue) {
+        if (list_from_node(&current_process->_link) == &proc_zero_queue &&
+            list_next(&current_process->_link)) {
             proc_to_run = list_get(list_next(&current_process->_link), Process, _link);
         }
         else {

@@ -7,7 +7,7 @@
 
 #define proc_kernel_thread(func)    (((size_t)(func)) + 1)
 
-volatile ProcScene *proc_current_scene;
+Process *current_process;
 SBTree proc_tree;
 
 static LinkedList proc_zero_queue;
@@ -84,9 +84,51 @@ _proc_insert_into_queues(Process *proc)
 static void
 init_proc()
 {
-    dbg_uart_str("init process running\n");
+    int pid;
+    int forked;
 
-    for (;;) { }
+    // dbg_uart_str("Init running\n")
+    __asm__ volatile (
+            "addiu $4, $zero, 0\n\t"
+            "move $5, %0\n\t"
+            "syscall"
+            : : "r"("Init running\n")
+        );
+
+    // dbg_uart_str("Init running\n")
+    __asm__ volatile (
+            "addiu $4, $zero, 0\n\t"
+            "move $5, %0\n\t"
+            "syscall"
+            : : "r"("Init running\n")
+        );
+
+    // proc_do_fork()
+    __asm__ volatile (
+            "addiu $4, $zero, 3\n\t"
+            "syscall\n\t"
+            "move %0, $2"
+            : "=r"(forked) :
+        );
+
+    // pid = proc_do_get_pid()
+    __asm__ volatile (
+            "addiu $4, $zero, 2\n\t"
+            "syscall\n\t"
+            "move %0, $2"
+            : "=r"(pid) :
+        );
+
+    // dbg_uart_hex(pid)
+    __asm__ volatile (
+            "addiu $4, $zero, 1\n\t"
+            "move $5, %0\n\t"
+            "syscall"
+            : : "r"(pid)
+        );
+
+    for (;;) {
+    }
 }
 
 static Process *
@@ -99,10 +141,14 @@ _proc_construct_init()
     new_proc->priv_offset = 0;
     new_proc->ticks = 0;
     new_proc->state = PS_READY;
+    new_proc->kernel_stack = malloc(PAGE_SIZE);
+    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene);
 
     mm_init_proc(&new_proc->mm);
-    memset((void*)(&new_proc->scene), 0, sizeof(ProcScene));
-    new_proc->scene.pc = proc_kernel_thread(init_proc);
+
+    ProcScene *scene = proc_current_scene(new_proc);
+    memset(scene, 0, sizeof(ProcScene));
+    scene->pc = proc_kernel_thread(init_proc);
 
     return new_proc;
 }
@@ -110,6 +156,8 @@ _proc_construct_init()
 void
 proc_init()
 {
+    dbg_uart_str("Proc init\n");
+
     _proc_id = 0;
 
     sb_init(&proc_tree);
@@ -119,15 +167,14 @@ proc_init()
     list_init(&proc_realtime_queue);
 
     Process *init_proc = _proc_construct_init();
-    _proc_insert(&proc_tree, init_proc);
 
+    _proc_insert(&proc_tree, init_proc);
     _proc_insert_into_queues(init_proc);
 
-    proc_current_scene = &init_proc->scene;
     proc_schedule();    // update states
 
-    proc_current_scene->regs[29] = (size_t)mm_do_mmap_empty(PAGE_SIZE, USER_SPACE_SIZE - PAGE_SIZE) 
-                                        - PAGE_SIZE;   // allocate stack space
+    ProcScene *scene = proc_current_scene(init_proc);
+    scene->regs[29] = (size_t)mm_do_mmap_empty(PAGE_SIZE, USER_SPACE_SIZE - PAGE_SIZE) + PAGE_SIZE;
 }
 
 void
@@ -180,18 +227,23 @@ proc_schedule()
     assert(proc_to_run);
 
     mm_set_page_table(&proc_to_run->mm);
-    proc_current_scene = &proc_to_run->scene;
+    current_process = proc_to_run;
 
     dbg_uart_str("to ");
     dbg_uart_str(proc_to_run->name);
-    dbg_uart_str("\n");
+    dbg_uart_str(" ");
+    dbg_uart_hex(proc_to_run->id);
 }
 
 int
 proc_do_fork()
 {
+    dbg_uart_str("Fork! ");
+
     Process *current = current_process;
     Process *new_proc = malloc(sizeof(Process));
+    new_proc->kernel_stack = malloc(PAGE_SIZE);
+    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene);
 
     new_proc->id = ++_proc_id;
     new_proc->state = PS_READY;
@@ -202,8 +254,16 @@ proc_do_fork()
     current->ticks -= new_proc->ticks;
 
     mm_duplicate(&new_proc->mm, &current->mm);
-    memcpy((void*)&new_proc->scene, (void*)&current->scene, sizeof(ProcScene));
-    new_proc->scene.regs[2] = 0;    // set $v0 to 0
+    memcpy(proc_current_scene(new_proc), proc_current_scene(current), sizeof(ProcScene));
+    proc_current_scene(new_proc)->regs[2] = 0;    // set $v0 to 0
 
+    _proc_insert_into_queues(new_proc);
+
+    dbg_uart_str("new proc id: ");
+    dbg_uart_hex(_proc_id);
     return new_proc->id;
 }
+
+int
+proc_do_get_pid()
+{ return current_process->id; }

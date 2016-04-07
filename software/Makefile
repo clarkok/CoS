@@ -1,4 +1,5 @@
 all:
+	make -C libc
 	make -C kernel
 	make -C boot
 	cp boot/product/bios.coe ./

@@ -428,6 +428,7 @@ mm_duplicate(MemoryManagement *dst, MemoryManagement *src)
                 {
                     pg->type = MM_COW;
                     pg->i_shared_page = mm_shared_add_ref(pg->p_page_start, pg->page_count, 1);
+                    _mm_set_page_table(src->page_table, pg->v_page_start, pg->p_page_start, pg->page_count, 0);
                     // fall through
                 }
             case MM_COW:
@@ -439,10 +440,9 @@ mm_duplicate(MemoryManagement *dst, MemoryManagement *src)
                     new_pg->page_count = pg->page_count;
                     new_pg->type = pg->type;
                     new_pg->i_shared_page = mm_shared_add_ref(pg->p_page_start, pg->page_count, 1);
-
-                    _mm_set_page_table(src->page_table, pg->v_page_start, pg->p_page_start, pg->page_count, 0);
                     _mm_set_page_table(dst->page_table, new_pg->v_page_start, new_pg->p_page_start, new_pg->page_count, 0);
 
+                    _mm_page_group_insert(&dst->page_groups, new_pg);
                     break;
                 }
             default:
@@ -547,12 +547,18 @@ mm_pagefault_handler()
 
     if (!pg) {
         // TODO terminate current_process
+        dbg_uart_str("Current pid: ");
+        dbg_uart_hex(current_process->id);
+
         assert(false && "Should terminate current process");
     }
 
     switch (pg->type) {
         case MM_EMPTY:
             // TODO terminate current_process
+            dbg_uart_str("Current pid: ");
+            dbg_uart_hex(current_process->id);
+
             assert(false && "Should terminate current process");
             break;
         case MM_COW:

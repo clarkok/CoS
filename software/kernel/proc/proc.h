@@ -29,13 +29,16 @@ typedef struct ProcScene
     size_t regs[31];
     size_t lo;
     size_t hi;
-    uint8_t kernel_stack[PAGE_SIZE];
 } ProcScene;
 
 #define PROC_NAME_LENGTH 11
 
 typedef struct Process
 {
+    // for assembly
+    char *kernel_stack_top;
+    char *kernel_stack;
+
     LinkedNode _link;
     SBNode _node;
 
@@ -73,17 +76,19 @@ typedef struct Process
     size_t ticks;
 
     MemoryManagement mm;
-    volatile ProcScene scene;
 } Process;
 
-extern volatile ProcScene *proc_current_scene;
+extern Process *current_process;
 extern SBTree proc_tree;
-
-#define current_process     (container_of(proc_current_scene, Process, scene))
 
 void proc_init();
 void proc_schedule();
 
 int proc_do_fork();
+int proc_do_get_pid();
+
+static inline ProcScene *
+proc_current_scene(Process *proc)
+{ return (ProcScene *)(proc->kernel_stack_top); }
 
 #endif

@@ -1,4 +1,4 @@
-CORE_ASM= core/kernel.asm core/interrupt.asm
+CORE_ASM= core/kernel.asm core/interrupt.asm core/syscall_table.asm
 
 DEP_DIR = build/dep/
 OBJ_DIR = build/

@@ -66,6 +66,7 @@ __assert_fail:
     break
 
 kernel_panic:
+    mtc0    $zero,  2
     addiu   $k0,    $zero,  0xFE0C
     lui     $k1,    %hi(_KERNEL_PANIC)
     addiu   $k1,    $k1,    %lo(_KERNEL_PANIC)

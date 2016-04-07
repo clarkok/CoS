@@ -16,9 +16,9 @@ init()
     mm_init();
     proc_init();
     driver_init();
-
     interrupt_init();
-    interrupt_reenter();
+
+    process_enter();
 
     __assert_fail();
 }

@@ -5,107 +5,154 @@ interrupt_init:
     mtc0    $k0,    4
     jr      $ra
 
+process_enter:
+    lui     $k0,    %hi(current_process)
+    lw      $k0,    %lo(current_process)($k0)
+    lw      $sp,    0($k0)      # load kernel_stack_top
+    j       interrupt_leave
+
 interrupt_entry:
-    ## saving
-    lui     $k0,    %hi(proc_current_scene)
-    lw      $k0,    %lo(proc_current_scene)($k0)    ## load proc_current_scene
-
-    mfc0    $k1,    0                               ## get epc
-    sw      $1,     4($k0)
-    sw      $2,     8($k0)
-    sw      $3,     12($k0)
-    sw      $4,     16($k0)
-    sw      $5,     20($k0)
-    sw      $6,     24($k0)
-    sw      $7,     28($k0)
-    sw      $8,     32($k0)
-    sw      $9,     36($k0)
-    sw      $10,    40($k0)
-    sw      $11,    44($k0)
-    sw      $12,    48($k0)
-    sw      $13,    52($k0)
-    sw      $14,    56($k0)
-    sw      $15,    60($k0)
-    sw      $16,    64($k0)
-    sw      $17,    68($k0)
-    sw      $18,    72($k0)
-    sw      $19,    76($k0)
-    sw      $20,    80($k0)
-    sw      $21,    84($k0)
-    sw      $22,    88($k0)
-    sw      $23,    92($k0)
-    sw      $24,    96($k0)
-    sw      $25,    100($k0)
-    sw      $28,    112($k0)
-    sw      $29,    116($k0)
-    sw      $30,    120($k0)
-    sw      $31,    124($k0)
+    lui     $k0,    %hi(current_process)
+    lw      $k0,    %lo(current_process)($k0)
+    lw      $k1,    0($k0)      # load kernel_stack_top
+    addiu   $k1,    $k1,    -136
     sw      $k1,    0($k0)
-    mflo    $k1
-    sw      $k1,    128($k0)
-    mfhi    $k1
-    sw      $k1,    132($k0)
 
-    lui     $k0,    0x8000
-    and     $k1,    $k0,    $sp
-    bnez    $k1,    _interrupt_not_set_stack
-    
-    ## set $sp to kernel_stack
-    lui     $k0,    %hi(proc_current_scene)
-    lw      $k0,    %lo(proc_current_scene)($k0)
-    addiu   $sp,    $k0,    4232
+    mfc0    $k0,    0
+    sw      $1,     4($k1)
+    sw      $2,     8($k1)
+    sw      $3,     12($k1)
+    sw      $4,     16($k1)
+    sw      $5,     20($k1)
+    sw      $6,     24($k1)
+    sw      $7,     28($k1)
+    sw      $8,     32($k1)
+    sw      $9,     36($k1)
+    sw      $10,    40($k1)
+    sw      $11,    44($k1)
+    sw      $12,    48($k1)
+    sw      $13,    52($k1)
+    sw      $14,    56($k1)
+    sw      $15,    60($k1)
+    sw      $16,    64($k1)
+    sw      $17,    68($k1)
+    sw      $18,    72($k1)
+    sw      $19,    76($k1)
+    sw      $20,    80($k1)
+    sw      $21,    84($k1)
+    sw      $22,    88($k1)
+    sw      $23,    92($k1)
+    sw      $24,    96($k1)
+    sw      $25,    100($k1)
+    sw      $28,    112($k1)
+    sw      $29,    116($k1)
+    sw      $30,    120($k1)
+    sw      $31,    124($k1)
+    sw      $k0,    0($k1)
+    mflo    $k0
+    sw      $k0,    128($k1)
+    mfhi    $k0
+    sw      $k0,    132($k1)
 
-_interrupt_not_set_stack:
-    mfc0    $k1,    1                               ## get ecause
-    lui     $k0,    %hi(INTERRUPT_HANDLER_TABLE)
-    andi    $k1,    $k1,    15
-    sll     $k1,    $k1,    2
-    addu    $k0,    $k0,    $k1
-    lw      $k1,    %lo(INTERRUPT_HANDLER_TABLE)($k0)
+    move    $sp,    $k1
 
-    jalr    $k1
+    mfc0    $k0,    1
+    lui     $k1,    %hi(INTERRUPT_HANDLER_TABLE)
+    sll     $k0,    $k0,    2
+    addu    $k1,    $k1,    $k0
+    lw      $k0,    %lo(INTERRUPT_HANDLER_TABLE)($k1)
 
-interrupt_reenter:
-    lui     $k0,    %hi(proc_current_scene)
-    lw      $k0,    %lo(proc_current_scene)($k0)    ## load proc_current_scene again
+    jalr    $k0
 
-    lw      $k1,    0($k0)
-    lw      $1,     4($k0)
-    lw      $2,     8($k0)
-    lw      $3,     12($k0)
-    lw      $4,     16($k0)
-    lw      $5,     20($k0)
-    lw      $6,     24($k0)
-    lw      $7,     28($k0)
-    lw      $8,     32($k0)
-    lw      $9,     36($k0)
-    lw      $10,    40($k0)
-    lw      $11,    44($k0)
-    lw      $12,    48($k0)
-    lw      $13,    52($k0)
-    lw      $14,    56($k0)
-    lw      $15,    60($k0)
-    lw      $16,    64($k0)
-    lw      $17,    68($k0)
-    lw      $18,    72($k0)
-    lw      $19,    76($k0)
-    lw      $20,    80($k0)
-    lw      $21,    84($k0)
-    lw      $22,    88($k0)
-    lw      $23,    92($k0)
-    lw      $24,    96($k0)
-    lw      $25,    100($k0)
-    lw      $28,    112($k0)
-    lw      $29,    116($k0)
-    lw      $30,    120($k0)
-    lw      $31,    124($k0)
-    mtc0    $k1,    0                               ## restore epc
-    lw      $k1,    128($k0)
-    mtlo    $k1
-    lw      $k1,    132($k0)
-    mthi    $k1
+interrupt_leave:
+    # disable global interrupt
+    mfc0    $t0,    2
+    lui     $t1,    %hi(0x7FFFFFFF)
+    addiu   $t1,    $t1,    %lo(0x7FFFFFFF)
+    and     $t0,    $t0,    $t1
+    mtc0    $t0,    2
+
+    lui     $k0,    %hi(current_process)
+    lw      $k0,    %lo(current_process)($k0)
+    lw      $k1,    0($k0)      # load kernel_stack_top
+    addiu   $k1,    $k1,    136
+    sw      $k1,    0($k0)
+
+    addiu   $k1,    $k1,    -136
+    lw      $k0,    0($k1)
+    mtc0    $k0,    0
+    lw      $1,     4($k1)
+    lw      $2,     8($k1)
+    lw      $3,     12($k1)
+    lw      $4,     16($k1)
+    lw      $5,     20($k1)
+    lw      $6,     24($k1)
+    lw      $7,     28($k1)
+    lw      $8,     32($k1)
+    lw      $9,     36($k1)
+    lw      $10,    40($k1)
+    lw      $11,    44($k1)
+    lw      $12,    48($k1)
+    lw      $13,    52($k1)
+    lw      $14,    56($k1)
+    lw      $15,    60($k1)
+    lw      $16,    64($k1)
+    lw      $17,    68($k1)
+    lw      $18,    72($k1)
+    lw      $19,    76($k1)
+    lw      $20,    80($k1)
+    lw      $21,    84($k1)
+    lw      $22,    88($k1)
+    lw      $23,    92($k1)
+    lw      $24,    96($k1)
+    lw      $25,    100($k1)
+    lw      $28,    112($k1)
+    lw      $29,    116($k1)
+    lw      $30,    120($k1)
+    lw      $31,    124($k1)
+    lw      $k0,    128($k1)
+    mtlo    $k0
+    lw      $k0,    132($k1)
+    mthi    $k0
 
     eret
+
+syscall_handler:
+    addiu   $sp,    $sp,    -4
+    sw      $ra,    0($sp)
+
+    ## enable interrupt
+#   mfc0    $t0,    2
+#   lui     $t1,    0x8000
+#   or      $t0,    $t0,    $t1
+#   mtc0    $t0,    2
+
+    sll     $t1,    $a0,    2
+    lui     $t0,    %hi(SYSCALL_TABLE)
+    addu    $t0,    $t0,    $t1
+    lw      $t0,    %lo(SYSCALL_TABLE)($t0)
+
+    move    $a0,    $a1
+    move    $a1,    $a2
+    move    $a2,    $a3
+    move    $a3,    $zero
+    jalr    $t0
+
+    ## disable interrupt
+#   mfc0    $t0,    2
+#   lui     $t1,    %hi(0x7FFFFFFF)
+#   addiu   $t1,    $t1,    %lo(0x7FFFFFFF)
+#   and     $t0,    $t0,    $t1
+#   mtc0    $t0,    2
+
+    lui     $t0,    %hi(current_process)
+    lw      $t0,    %lo(current_process)($t0)
+    lw      $t1,    0($t0)
+    sw      $v0,    8($t1)
+    
+    lw      $ra,    0($sp)
+    addiu   $sp,    $sp,    4
+    jr      $ra
 
 interrupt_default_handler:
     jr      $ra                                     ## do nothing
@@ -189,7 +236,7 @@ INTERRUPT_HANDLER_TABLE:
     .4byte  (interrupt_unexpected_exception_handler)            ## privilege inst
     .4byte  (interrupt_unexpected_exception_handler)            ## privilege addr
     .4byte  (interrupt_unexpected_exception_handler)            ## overflow
-    .4byte  (interrupt_unexpected_exception_handler)            ## syscall
+    .4byte  (syscall_handler)                                   ## syscall
     .4byte  (interrupt_unexpected_exception_handler)            ## break
 
     .section ".rodata"

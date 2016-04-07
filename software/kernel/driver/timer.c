@@ -26,7 +26,6 @@ void
 timer_init()
 {
     dbg_uart_str("Timer init\n");
-    dbg_uart_hex((size_t)timer_handler);
     INTERRUPT_HANDLER_TABLE[INT_TIMER] = (size_t)(&timer_handler);
     enable_int(INT_TIMER);
 }

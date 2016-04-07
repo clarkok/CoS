@@ -190,6 +190,6 @@ dbg_uart_hex(uint32_t x)
     dbg_uart_str("\n");
 }
 
-void interrupt_reenter();
+void process_enter();
 
 #endif

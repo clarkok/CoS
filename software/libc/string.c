@@ -1,13 +1,13 @@
 #include "string.h"
 
-void
-_memcpy_aligned(void *dst, const void *src, size_t num) __attribute__((always_inline))
+static inline void
+_memcpy_aligned(void *dst, const void *src, size_t num)
 {
     uint32_t *dst_i = (uint32_t*)dst,
              *src_i = (uint32_t*)src;
     size_t count = ((num >> 2) + 7) >> 3;
     if (!num) return;
-    switch (count & 0x7) {
+    switch ((num >> 2) & 0x7) {
     case 0: do { *dst_i++ = *src_i++;
     case 7:      *dst_i++ = *src_i++;
     case 6:      *dst_i++ = *src_i++;
@@ -20,14 +20,14 @@ _memcpy_aligned(void *dst, const void *src, size_t num) __attribute__((always_in
     }
 }
 
-void
-_memcpy_unaligned(void *dst, const void *src, size_t num)  __attribute__((always_inline))
+static inline void
+_memcpy_unaligned(void *dst, const void *src, size_t num)
 {
     uint8_t *dst_i = (uint8_t*)dst,
             *src_i = (uint8_t*)src;
     size_t count = (num + 7) >> 3;
     if (!num) return;
-    switch (count & 0x7) {
+    switch (num & 0x7) {
     case 0: do { *dst_i++ = *src_i++;
     case 7:      *dst_i++ = *src_i++;
     case 6:      *dst_i++ = *src_i++;
@@ -77,7 +77,7 @@ _memcpy_back_aligned(void *dst, const void *src, size_t num) __attribute__((alwa
              *src_i = (uint32_t*)src + (num >> 2);
     size_t count = ((num >> 2) + 7) >> 3;
     if (!num) return;
-    switch (count & 0x7) {
+    switch ((num >> 2) & 0x7) {
     case 0: do { *--dst_i = *--src_i;
     case 7:      *--dst_i = *--src_i;
     case 6:      *--dst_i = *--src_i;
@@ -97,7 +97,7 @@ _memcpy_back_unaligned(void *dst, const void *src, size_t num)  __attribute__((a
             *src_i = (uint8_t*)src + num;
     size_t count = (num + 7) >> 3;
     if (!num) return;
-    switch (count & 0x7) {
+    switch (num & 0x7) {
     case 0: do { *--dst_i = *--src_i;
     case 7:      *--dst_i = *--src_i;
     case 6:      *--dst_i = *--src_i;
@@ -281,7 +281,7 @@ _memset_aligned(void *dst, int ch, size_t num)
                      ((uint8_t)ch);
     size_t count = ((num >> 2) + 7) >> 3;
     if (!num) return;
-    switch (count & 0x7) {
+    switch ((num >> 2) & 0x7) {
     case 0: do { *dst_i++ = value;
     case 7:      *dst_i++ = value;
     case 6:      *dst_i++ = value;

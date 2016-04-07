@@ -95,14 +95,6 @@ init_proc()
             : : "r"("Init running\n")
         );
 
-    // dbg_uart_str("Init running\n")
-    __asm__ volatile (
-            "addiu $4, $zero, 0\n\t"
-            "move $5, %0\n\t"
-            "syscall"
-            : : "r"("Init running\n")
-        );
-
     // proc_do_fork()
     __asm__ volatile (
             "addiu $4, $zero, 3\n\t"
@@ -110,6 +102,33 @@ init_proc()
             "move %0, $2"
             : "=r"(forked) :
         );
+
+    if (forked) {
+        // dbg_uart_str("I am the father\n")
+        __asm__ volatile (
+                "addiu $4, $zero, 0\n\t"
+                "move $5, %0\n\t"
+                "syscall"
+                : : "r"("I am the father\n")
+            );
+
+        // dbg_uart_hex(forked)
+        __asm__ volatile (
+                "addiu $4, $zero, 1\n\t"
+                "move $5, %0\n\t"
+                "syscall"
+                : : "r"(forked)
+            );
+    }
+    else {
+        // dbg_uart_str("I am the child\n")
+        __asm__ volatile (
+                "addiu $4, $zero, 0\n\t"
+                "move $5, %0\n\t"
+                "syscall"
+                : : "r"("I am the child\n")
+            );
+    }
 
     // pid = proc_do_get_pid()
     __asm__ volatile (
@@ -142,7 +161,8 @@ _proc_construct_init()
     new_proc->ticks = 0;
     new_proc->state = PS_READY;
     new_proc->kernel_stack = malloc(PAGE_SIZE);
-    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene);
+    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene) - 4;
+    new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
 
     mm_init_proc(&new_proc->mm);
 
@@ -243,7 +263,9 @@ proc_do_fork()
     Process *current = current_process;
     Process *new_proc = malloc(sizeof(Process));
     new_proc->kernel_stack = malloc(PAGE_SIZE);
-    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene);
+    assert(new_proc->kernel_stack);
+    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene) - 4;
+    new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
 
     new_proc->id = ++_proc_id;
     new_proc->state = PS_READY;
@@ -255,7 +277,7 @@ proc_do_fork()
 
     mm_duplicate(&new_proc->mm, &current->mm);
     memcpy(proc_current_scene(new_proc), proc_current_scene(current), sizeof(ProcScene));
-    proc_current_scene(new_proc)->regs[2] = 0;    // set $v0 to 0
+    proc_current_scene(new_proc)->regs[1] = 0;    // set $v0 to 0
 
     _proc_insert_into_queues(new_proc);
 

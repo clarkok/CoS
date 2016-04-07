@@ -15,8 +15,15 @@ interrupt_entry:
     lui     $k0,    %hi(current_process)
     lw      $k0,    %lo(current_process)($k0)
     lw      $k1,    0($k0)      # load kernel_stack_top
-    addiu   $k1,    $k1,    -136
+    addiu   $k1,    $k1,    -140
     sw      $k1,    0($k0)
+    lw      $k0,    8($k0)
+    sw      $k0,    136($k1)
+
+    ## update current_scene
+    lui     $k0,    %hi(current_process)
+    lw      $k0,    %lo(current_process)($k0)
+    sw      $k1,    8($k0)
 
     mfc0    $k0,    0
     sw      $1,     4($k1)
@@ -75,10 +82,13 @@ interrupt_leave:
     lui     $k0,    %hi(current_process)
     lw      $k0,    %lo(current_process)($k0)
     lw      $k1,    0($k0)      # load kernel_stack_top
-    addiu   $k1,    $k1,    136
+    addiu   $k1,    $k1,    140
     sw      $k1,    0($k0)
+    addiu   $k1,    $k1,    -140
 
-    addiu   $k1,    $k1,    -136
+    lw      $t0,    136($k1)
+    sw      $t0,    8($k0)
+
     lw      $k0,    0($k1)
     mtc0    $k0,    0
     lw      $1,     4($k1)

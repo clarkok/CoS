@@ -38,6 +38,7 @@ typedef struct Process
     // for assembly
     char *kernel_stack_top;
     char *kernel_stack;
+    volatile ProcScene *current_scene;
 
     LinkedNode _link;
     SBNode _node;
@@ -89,6 +90,6 @@ int proc_do_get_pid();
 
 static inline ProcScene *
 proc_current_scene(Process *proc)
-{ return (ProcScene *)(proc->kernel_stack_top); }
+{ return (ProcScene*)proc->current_scene; }
 
 #endif

@@ -191,10 +191,6 @@ proc_schedule()
 int
 proc_do_fork()
 {
-    log_in("FORK");
-
-    dbg_uart_str("Fork! ");
-
     Process *current = current_process;
 
     Process *new_proc = malloc(sizeof(Process));
@@ -218,11 +214,8 @@ proc_do_fork()
     proc_current_scene(new_proc)->regs[1] = 0;    // set $v0 to 0
 
     _proc_insert_into_queues(new_proc);
+    _proc_insert(&proc_tree, new_proc);
 
-    dbg_uart_str("new proc id: ");
-    dbg_uart_hex(_proc_id);
-
-    log_out("FORK");
     return new_proc->id;
 }
 
@@ -234,7 +227,6 @@ void
 proc_do_set_pname(const char *name)
 { strncpy(current_process->name, name, PROC_NAME_LENGTH); }
 
-void
-proc_do_print_processes()
-{
-}
+size_t
+proc_do_get_proc_nr()
+{ return sb_size(&proc_tree); }

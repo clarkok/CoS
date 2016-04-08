@@ -14,6 +14,10 @@ init_proc()
 
     for (int i = 0; i < 5; ++i) {
         k_fork();
+        k_printf(
+                "pid: 0x%x, i=0x%x\n",
+                k_get_pid(), i
+            );
     }
 
     for (;;) {

@@ -571,9 +571,7 @@ mm_pagefault_handler()
             assert(false && "Should terminate current process");
             break;
         case MM_COW:
-            kprintf("ref_count: 0x%x\n", pg->i_shared_page->ref_count);
             if (pg->i_shared_page->ref_count == 1) {
-                kprintf("pg: 0x%x\n", pg);
                 mm_shared_rm_ref(pg->i_shared_page);
                 pg->type = MM_EMPTY;
                 _mm_set_page_table(mm->page_table, pg->v_page_start, pg->p_page_start, pg->page_count, 1);
@@ -589,8 +587,8 @@ mm_pagefault_handler()
                         pg->page_count << PAGE_SHIFT
                     );
 
-                _mm_reset_page_table(mm->page_table, pg->v_page_start, pg->page_count);
                 pg->p_page_start = new_pages;
+                pg->type = MM_EMPTY;
                 _mm_set_page_table(mm->page_table, pg->v_page_start, pg->p_page_start, pg->page_count, 1);
             }
             mm_update_mmu();

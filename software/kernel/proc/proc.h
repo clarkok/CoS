@@ -95,6 +95,7 @@ void proc_schedule();
 int proc_do_fork();
 int proc_do_get_pid();
 void proc_do_set_pname();
+size_t proc_do_get_proc_nr();
 
 static inline ProcScene *
 proc_current_scene(Process *proc)

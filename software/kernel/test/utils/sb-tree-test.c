@@ -147,6 +147,26 @@ sb_tree_rmroot_test(CuTest *tc)
     CuAssertIntEquals(tc, 3, sb_get(sb_tail(&uut), SBTreeTestNode, _node)->number);
 }
 
+void
+sb_tree_rm_to_empty(CuTest *tc)
+{
+    SBTree uut = SB_TREE_INIT;
+
+    _sb_tree_test_insert(&uut, 1);
+    _sb_tree_test_insert(&uut, 2);
+
+    CuAssertIntEquals(tc, 2, sb_size(&uut));
+
+    sb_unlink(_sb_tree_test_find(&uut, 1));
+    sb_unlink(_sb_tree_test_find(&uut, 2));
+
+    CuAssertIntEquals(tc, 0, sb_size(&uut));
+
+    sb_for_each(&uut, node) {
+        CuAssertTrue(tc, 0);
+    }
+}
+
 typedef struct Node
 {
     SBNode _node;
@@ -243,7 +263,7 @@ sb_tree_bug_test(CuTest *tc)
 
     for (int i = 0; i < (int)sizeof(test_data) / (int)sizeof(test_data[0]); ++i) {
         if (test_data[i] > 0) {
-            printf(": add ref 0x%x\n", test_data[i]);
+            // printf(": add ref 0x%x\n", test_data[i]);
             Node *node = sb_get(_sb_tree_test_find_count(&uut, test_data[i]), Node, _node);
             if (node) {
                 node->count++;
@@ -254,7 +274,7 @@ sb_tree_bug_test(CuTest *tc)
         }
         else {
             Node *node = sb_get(_sb_tree_test_find_count(&uut, -test_data[i]), Node, _node);
-            printf(": rm ref 0x%x\n", -test_data[i]);
+            // printf(": rm ref 0x%x\n", -test_data[i]);
             CuAssertTrue(tc, !!node);
             CuAssertTrue(tc, (node->count) > 0);
             if (!--(node->count)) {
@@ -262,6 +282,7 @@ sb_tree_bug_test(CuTest *tc)
             }
         }
 
+        /*
         printf("Dump:\n");
         sb_for_each(&uut, node) {
             CuAssertTrue(tc, !!node);
@@ -271,6 +292,7 @@ sb_tree_bug_test(CuTest *tc)
                 );
         }
         printf("\n");
+        */
     }
 }
 
@@ -284,6 +306,7 @@ sb_tree_test_suite(void)
     SUITE_ADD_TEST(suite, sb_tree_insert_many_times);
     SUITE_ADD_TEST(suite, sb_tree_zigzag_test);
     SUITE_ADD_TEST(suite, sb_tree_rmroot_test);
+    SUITE_ADD_TEST(suite, sb_tree_rm_to_empty);
     SUITE_ADD_TEST(suite, sb_tree_bug_test);
 
     return suite;

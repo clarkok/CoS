@@ -112,4 +112,19 @@ k_get_free_page_nr()
     return ret;
 }
 
+static inline size_t
+k_get_proc_nr()
+{
+    size_t ret;
+
+    __asm__ volatile (
+            "addiu $a0, $zero, 8\n\t"
+            "syscall\n\t"
+            "move %0, $v0"
+            : "=r"(ret) :
+        );
+
+    return ret;
+}
+
 #endif

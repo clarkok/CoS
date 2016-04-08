@@ -9,6 +9,7 @@
 
 Process *current_process;
 SBTree proc_tree;
+int proc_request_schedule;
 
 static LinkedList proc_zero_queue;
 static LinkedList proc_normal_queue;
@@ -143,6 +144,7 @@ proc_init()
     list_init(&proc_realtime_queue);
 
     Process *init_proc = _proc_construct_init();
+    current_process = init_proc;
 
     proc_schedule();    // update states
 
@@ -199,13 +201,55 @@ proc_schedule()
 
     assert(proc_to_run);
 
+    if (current_process->state == PS_RUNNING) {
+        current_process->state = PS_READY;
+    }
+
     mm_set_page_table(&proc_to_run->mm);
     current_process = proc_to_run;
+    current_process->state = PS_RUNNING;
 
     dbg_uart_str("to ");
     dbg_uart_str(proc_to_run->name);
     dbg_uart_str(" ");
     dbg_uart_hex(proc_to_run->id);
+}
+
+Process *
+proc_get_by_id(size_t id)
+{ return _proc_find(&proc_tree, id); }
+
+void
+proc_block(size_t pid, size_t waiting_for)
+{
+    Process *proc = proc_get_by_id(pid);
+    assert(proc);
+
+    if (proc->state == PS_READY || proc->state == PS_RUNNING) {
+        list_unlink(&proc->_link);
+    }
+
+    proc->state = PS_WAITING;
+    proc->waiting_for = waiting_for;
+
+    proc_request_schedule = 1;
+}
+
+void
+proc_unblock(size_t pid, size_t retval)
+{
+    Process *proc = proc_get_by_id(pid);
+    assert(proc);
+    assert(proc->state == PS_WAITING);
+
+    proc->state = PS_READY;
+    proc->waiting_for = 0;
+
+    _proc_insert_into_queues(proc);
+
+    proc->current_scene->regs[1] = retval;
+
+    proc_request_schedule = 1;
 }
 
 int

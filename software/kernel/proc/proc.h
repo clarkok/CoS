@@ -89,18 +89,24 @@ typedef struct Process
     LinkedList children;
 
     LinkedList messages;
-    int waiting_for;
+    size_t waiting_for;
 
     MemoryManagement mm;
 } Process;
 
 extern Process *current_process;
 extern SBTree proc_tree;
+extern int proc_request_schedule;
 
 #define foreach_proc(proc)  sb_foreach(&proc_tree, proc)
 
 void proc_init();
 void proc_schedule();
+
+Process *proc_get_by_id(size_t id);
+
+void proc_block(size_t pid, size_t waiting_for);
+void proc_unblock(size_t pid, size_t retval);
 
 int proc_do_fork();
 int proc_do_get_pid();

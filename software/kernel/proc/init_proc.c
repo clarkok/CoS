@@ -1,4 +1,4 @@
-#include <printf.h>
+#include <string.h>
 
 #include "lib/sysapi.h"
 #include "lib/kernelio.h"
@@ -12,12 +12,21 @@ init_proc()
             k_get_pid()
         );
 
-    for (int i = 0; i < 5; ++i) {
-        k_fork();
-        k_printf(
-                "pid: 0x%x, i=0x%x\n",
-                k_get_pid(), i
-            );
+    int child_pid = k_fork();
+
+    if (child_pid) {
+        size_t msg_length = k_msg_wait_for(0);
+        char *msg_content = k_mmap_empty(msg_length, -1);
+        k_msg_recv_for(0, msg_content);
+
+        k_printf("received: \"%s\"\n", msg_content);
+    }
+    else {
+        const char msg[] = "Hello from the child";
+
+        k_msg_send(1, strlen(msg) + 1, msg);
+
+        k_printf("sent: \"%s\"\n", msg);
     }
 
     for (;;) {

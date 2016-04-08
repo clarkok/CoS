@@ -127,4 +127,70 @@ k_get_proc_nr()
     return ret;
 }
 
+static inline int
+k_msg_send(size_t dst, size_t length, const void *content)
+{
+    int ret;
+
+    __asm__ volatile (
+            "move $a3, %3\n\t"
+            "move $a2, %2\n\t"
+            "move $a1, %1\n\t"
+            "addiu $a0, $zero, 9\n\t"
+            "syscall\n\t"
+            "move %0, $v0"
+            : "=r"(ret) : "r"(dst), "r"(length), "r"(content)
+        );
+
+    return ret;
+}
+
+static inline size_t
+k_msg_wait_for(size_t src)
+{
+    size_t ret;
+
+    __asm__ volatile (
+            "move $a1, %1\n\t"
+            "addiu $a0, $zero, 10\n\t"
+            "syscall\n\t"
+            "move %0, $v0"
+            : "=r"(ret) : "r"(src)
+        );
+
+    return ret;
+}
+
+static inline int
+k_msg_recv_for(size_t src, char *buffer)
+{
+    int ret;
+
+    __asm__ volatile (
+            "move $a2, %2\n\t"
+            "move $a1, %1\n\t"
+            "addiu $a0, $zero, 11\n\t"
+            "syscall\n\t"
+            "move %0, $v0"
+            : "=r"(ret) : "r"(src), "r"(buffer)
+        );
+
+    return ret;
+}
+
+static inline size_t
+k_get_msg_nr()
+{
+    int ret;
+
+    __asm__ volatile (
+            "addiu $a0, $zero, 12\n\t"
+            "syscall\n\t"
+            "move %0, $v0"
+            : "=r"(ret) :
+        );
+
+    return ret;
+}
+
 #endif

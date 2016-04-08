@@ -11,3 +11,7 @@ SYSCALL_TABLE:
     .4byte  (mm_do_munmap)              # 6
     .4byte  (mm_do_get_free_page_nr)    # 7
     .4byte  (proc_do_get_proc_nr)       # 8
+    .4byte  (proc_msg_do_send)          # 9
+    .4byte  (proc_msg_do_wait_for)      # 10
+    .4byte  (proc_msg_do_recv_for)      # 11
+    .4byte  (proc_msg_do_get_msg_nr)    # 12

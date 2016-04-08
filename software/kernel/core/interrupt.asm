@@ -137,6 +137,9 @@ syscall_handler:
 #   or      $t0,    $t0,    $t1
 #   mtc0    $t0,    2
 
+    lui     $t0,    %hi(proc_request_schedule)
+    sw      $zero,  %lo(proc_request_schedule)($t0)
+
     sll     $t1,    $a0,    2
     lui     $t0,    %hi(SYSCALL_TABLE)
     addu    $t0,    $t0,    $t1
@@ -159,7 +162,15 @@ syscall_handler:
     lw      $t0,    %lo(current_process)($t0)
     lw      $t1,    0($t0)
     sw      $v0,    8($t1)
-    
+
+    lui     $t0,    %hi(proc_request_schedule)
+    lw      $t1,    %lo(proc_request_schedule)($t0)
+
+    beqz    $t1,    _syscall_no_need_schedule
+
+    jal     proc_schedule
+
+_syscall_no_need_schedule:
     lw      $ra,    0($sp)
     addiu   $sp,    $sp,    4
     jr      $ra

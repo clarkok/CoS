@@ -32,4 +32,6 @@ void mm_buddy_init(Buddy *buddy, size_t reserved);
 int mm_buddy_alloc(Buddy *buddy, size_t page_nr);
 void mm_buddy_free(Buddy *buddy, int page);
 
+#define mm_buddy_get_free_nr(buddy) ((buddy)->free_nr)
+
 #endif

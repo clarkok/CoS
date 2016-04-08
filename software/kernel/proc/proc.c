@@ -81,89 +81,22 @@ _proc_insert_into_queues(Process *proc)
     }
 }
 
-static void
-init_proc()
-{
-    int pid;
-    int forked;
-
-    // dbg_uart_str("Init running\n")
-    __asm__ volatile (
-            "addiu $4, $zero, 0\n\t"
-            "move $5, %0\n\t"
-            "syscall"
-            : : "r"("Init running\n")
-        );
-
-    // proc_do_fork()
-    __asm__ volatile (
-            "addiu $4, $zero, 3\n\t"
-            "syscall\n\t"
-            "move %0, $2"
-            : "=r"(forked) :
-        );
-
-    if (forked) {
-        // dbg_uart_str("I am the father\n")
-        __asm__ volatile (
-                "addiu $4, $zero, 0\n\t"
-                "move $5, %0\n\t"
-                "syscall"
-                : : "r"("I am the father\n")
-            );
-
-        // dbg_uart_hex(forked)
-        __asm__ volatile (
-                "addiu $4, $zero, 1\n\t"
-                "move $5, %0\n\t"
-                "syscall"
-                : : "r"(forked)
-            );
-    }
-    else {
-        // dbg_uart_str("I am the child\n")
-        __asm__ volatile (
-                "addiu $4, $zero, 0\n\t"
-                "move $5, %0\n\t"
-                "syscall"
-                : : "r"("I am the child\n")
-            );
-    }
-
-    // pid = proc_do_get_pid()
-    __asm__ volatile (
-            "addiu $4, $zero, 2\n\t"
-            "syscall\n\t"
-            "move %0, $2"
-            : "=r"(pid) :
-        );
-
-    // dbg_uart_hex(pid)
-    __asm__ volatile (
-            "addiu $4, $zero, 1\n\t"
-            "move $5, %0\n\t"
-            "syscall"
-            : : "r"(pid)
-        );
-
-    for (;;) {
-    }
-}
+void init_proc();
 
 static Process *
 _proc_construct_init()
 {
     Process *new_proc = malloc(sizeof(Process));
+    new_proc->kernel_stack = malloc(PAGE_SIZE);
+    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene) - 4;
+    new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
     new_proc->id = ++_proc_id;
+    new_proc->parent = 0;
+    new_proc->state = PS_READY;
     strncpy(new_proc->name, "init", PROC_NAME_LENGTH);
     new_proc->priv_base = PRIV_NORMAL;
     new_proc->priv_offset = 0;
     new_proc->ticks = 0;
-    new_proc->state = PS_READY;
-    new_proc->kernel_stack = malloc(PAGE_SIZE);
-    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene) - 4;
-    new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
-
     mm_init_proc(&new_proc->mm);
 
     ProcScene *scene = proc_current_scene(new_proc);
@@ -194,7 +127,7 @@ proc_init()
     proc_schedule();    // update states
 
     ProcScene *scene = proc_current_scene(init_proc);
-    scene->regs[29] = (size_t)mm_do_mmap_empty(PAGE_SIZE, USER_SPACE_SIZE - PAGE_SIZE) + PAGE_SIZE;
+    scene->regs[28] = (size_t)mm_do_mmap_empty(PAGE_SIZE, USER_SPACE_SIZE - PAGE_SIZE) + PAGE_SIZE;
 }
 
 void
@@ -258,16 +191,21 @@ proc_schedule()
 int
 proc_do_fork()
 {
+    log_in("FORK");
+
     dbg_uart_str("Fork! ");
 
     Process *current = current_process;
+
     Process *new_proc = malloc(sizeof(Process));
     new_proc->kernel_stack = malloc(PAGE_SIZE);
     assert(new_proc->kernel_stack);
+
     new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene) - 4;
     new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
 
     new_proc->id = ++_proc_id;
+    new_proc->parent = current->id;
     new_proc->state = PS_READY;
     strncpy(new_proc->name, current->name, PROC_NAME_LENGTH);
     new_proc->priv_base = current->priv_base;
@@ -283,9 +221,20 @@ proc_do_fork()
 
     dbg_uart_str("new proc id: ");
     dbg_uart_hex(_proc_id);
+
+    log_out("FORK");
     return new_proc->id;
 }
 
 int
 proc_do_get_pid()
 { return current_process->id; }
+
+void
+proc_do_set_pname(const char *name)
+{ strncpy(current_process->name, name, PROC_NAME_LENGTH); }
+
+void
+proc_do_print_processes()
+{
+}

@@ -100,9 +100,15 @@ sb_rebalance(SBNode *node)
         node->size = l_size + r_size + 1;
 
         if (l_size > r_size + 1) {
+            if (_sb_size_could_null(node->left->left) < _sb_size_could_null(node->left->right)) {
+                _sb_turn_left(node->left);
+            }
             node = _sb_turn_right(node);
         }
         else if (r_size > l_size + 1) {
+            if (_sb_size_could_null(node->right->right) < _sb_size_could_null(node->right->left)) {
+                _sb_turn_right(node->right);
+            }
             node = _sb_turn_left(node);
         }
 

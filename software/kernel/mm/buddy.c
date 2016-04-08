@@ -3,6 +3,7 @@
 
 #include "utils/bits.h"
 #include "utils/linked-list.h"
+#include "core/kernel.h"
 
 #include "mm.h"
 #include "buddy.h"
@@ -14,7 +15,7 @@ mm_buddy_init(Buddy *buddy, size_t reserved)
         list_init(buddy->head + i);
     }
     list_prepend(buddy->head, &buddy->tree[1]._link);
-    buddy->free_nr = 1 << (MM_BUDDY_SHIFT - 1);
+    buddy->free_nr = 1 << MM_BUDDY_SHIFT;
 
     if (reserved) {
         mm_buddy_alloc(buddy, reserved);

@@ -57,6 +57,8 @@ void mm_set_page_table(MemoryManagement *mm);
 void *mm_do_mmap_empty(size_t size, size_t hint);
 void mm_do_munmap(void *);
 
+size_t mm_do_get_free_page_nr();
+
 void mm_pagefalut_handler();
 
 static inline void

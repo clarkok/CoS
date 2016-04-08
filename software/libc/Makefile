@@ -1,4 +1,4 @@
-SOURCES	= string.c ctype.c
+SOURCES	= string.c ctype.c printf.c
 
 DEP_DIR = build/dep/
 OBJ_DIR = build/

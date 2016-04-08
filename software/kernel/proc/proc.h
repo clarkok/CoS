@@ -49,6 +49,11 @@ typedef struct Process
     size_t id;
 
     /**
+     * Parent process ID
+     */
+    size_t parent;
+
+    /**
      * current state
      */
     int state;
@@ -82,11 +87,14 @@ typedef struct Process
 extern Process *current_process;
 extern SBTree proc_tree;
 
+#define foreach_proc(proc)  sb_foreach(&proc_tree, proc)
+
 void proc_init();
 void proc_schedule();
 
 int proc_do_fork();
 int proc_do_get_pid();
+void proc_do_set_pname();
 
 static inline ProcScene *
 proc_current_scene(Process *proc)

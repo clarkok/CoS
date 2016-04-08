@@ -190,6 +190,18 @@ dbg_uart_hex(uint32_t x)
     dbg_uart_str("\n");
 }
 
+int kprintf(const char *format, ...);
+
 void process_enter();
+
+#define log(func, in)   \
+    kprintf("%s " in ", proc: 0x%x, kstack: 0x%x, ksttop: 0x%x\n", func,    \
+            current_process->id, current_process->kernel_stack, current_process->kernel_stack_top)
+
+#define log_in(func)    \
+    log(#func, "<")
+
+#define log_out(func)   \
+    log(#func, ">")
 
 #endif

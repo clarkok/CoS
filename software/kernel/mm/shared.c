@@ -59,28 +59,81 @@ void
 mm_shared_init()
 { sb_init(&mm_shared_page_tree); }
 
+#define shared_dump()                                   \
+    do {                                                \
+        kprintf("SHAREDDump:\n");                       \
+        sb_for_each(&mm_shared_page_tree, node) {       \
+            SharedPages *sp =                           \
+                sb_get(node, SharedPages, _node);       \
+            kprintf(                                    \
+                    "SHARED     page: 0x%x,\t"          \
+                    "count: 0x%x,\t"                    \
+                    "ref: 0x%x,\t"                      \
+                    "this: 0x%x,\t"                     \
+                    "left: 0x%x,\t"                     \
+                    "right: 0x%x\t"                     \
+                    "parent: 0x%x\t"                    \
+                    "size: 0x%x\n"                      \
+                    ,                                   \
+                    sp->p_page_start,                   \
+                    sp->page_count,                     \
+                    sp->ref_count,                      \
+                    &sp->_node,                         \
+                    sp->_node.left,                     \
+                    sp->_node.right,                    \
+                    sp->_node.parent,                   \
+                    sp->_node.size                      \
+                );                                      \
+        }                                               \
+        kprintf("SHARED\n");                            \
+    } while (0)
+
+
 SharedPages *
 mm_shared_add_ref(size_t p_page_start, size_t page_count, int cow)
 {
-    SharedPages *new_pages = (SharedPages*)malloc(sizeof(SharedPages));
-    new_pages->p_page_start = p_page_start;
-    new_pages->page_count = page_count;
-    new_pages->ref_count = 1;
-    new_pages->copy_on_write = cow;
+    kprintf("\nSHARED: add ref 0x%x, 0x%x\n", p_page_start, page_count);
 
-    _mm_shared_pages_insert(&mm_shared_page_tree, new_pages);
+    SharedPages *pages = mm_shared_lookup(p_page_start);
+    if (pages) {
+        assert(pages->page_count == page_count);
+        pages->ref_count++;
 
-    return new_pages;
+        shared_dump();
+
+        return pages;
+    }
+    else {
+        SharedPages *new_pages = (SharedPages*)malloc(sizeof(SharedPages));
+        new_pages->p_page_start = p_page_start;
+        new_pages->page_count = page_count;
+        new_pages->ref_count = 1;
+        new_pages->copy_on_write = cow;
+
+        _mm_shared_pages_insert(&mm_shared_page_tree, new_pages);
+
+        shared_dump();
+
+        return new_pages;
+    }
 }
 
 int
 mm_shared_rm_ref(SharedPages *shared_pages)
 {
+    kprintf("\nSHARED: rm ref 0x%x, 0x%x\n", shared_pages->p_page_start, shared_pages->page_count);
+
     if (!--(shared_pages->ref_count)) {
         sb_unlink(&shared_pages->_node);
         free(shared_pages);
+
+        shared_dump();
+
         return 0;
     }
+
+    shared_dump();
+
     return shared_pages->ref_count;
 }
 

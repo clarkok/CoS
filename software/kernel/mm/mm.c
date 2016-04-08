@@ -402,7 +402,7 @@ mm_destroy_proc(MemoryManagement *mm)
         }
 
         SBNode *next = sb_next(node);
-        free(sb_unlink(node));
+        free(sb_get(sb_unlink(node), Process, _node));
         node = next;
     }
 
@@ -518,7 +518,11 @@ mm_do_munmap(void *ptr)
                 }
                 break;
             }
-        case MM_EMPTY: break;
+        case MM_EMPTY: 
+            {
+                mm_buddy_free(&buddy, pg->p_page_start);
+                break;
+            }
         default: assert(false);
     }
 
@@ -530,9 +534,15 @@ mm_do_munmap(void *ptr)
     mm_update_mmu();
 }
 
+size_t
+mm_do_get_free_page_nr()
+{ return mm_buddy_get_free_nr(&buddy); }
+
 void
 mm_pagefault_handler()
 {
+    log_in("PFH");
+
     size_t pagefault_addr = in_pfa();
     MemoryManagement *mm = &current_process->mm;
 
@@ -547,8 +557,7 @@ mm_pagefault_handler()
 
     if (!pg) {
         // TODO terminate current_process
-        dbg_uart_str("Current pid: ");
-        dbg_uart_hex(current_process->id);
+        kprintf("pagefault addr: 0x%x, current process 0x%x", pagefault_addr, current_process->id);
 
         assert(false && "Should terminate current process");
     }
@@ -562,7 +571,9 @@ mm_pagefault_handler()
             assert(false && "Should terminate current process");
             break;
         case MM_COW:
+            kprintf("ref_count: 0x%x\n", pg->i_shared_page->ref_count);
             if (pg->i_shared_page->ref_count == 1) {
+                kprintf("pg: 0x%x\n", pg);
                 mm_shared_rm_ref(pg->i_shared_page);
                 pg->type = MM_EMPTY;
                 _mm_set_page_table(mm->page_table, pg->v_page_start, pg->p_page_start, pg->page_count, 1);
@@ -587,4 +598,6 @@ mm_pagefault_handler()
         default:
             assert(false);
     }
+
+    log_out("PFH");
 }

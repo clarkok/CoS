@@ -10,13 +10,13 @@ mm_buddy_init_test(CuTest *tc)
     uut.tree = malloc(MM_BUDDY_TREE_SIZE);
 
     mm_buddy_init(&uut, 0);
-    CuAssertIntEquals(tc, (1 << (MM_BUDDY_SHIFT - 1)), uut.free_nr);
+    CuAssertIntEquals(tc, (1 << (MM_BUDDY_SHIFT)), uut.free_nr);
 
     mm_buddy_init(&uut, 10);
-    CuAssertIntEquals(tc, (1 << (MM_BUDDY_SHIFT - 1)) - 16, uut.free_nr);
+    CuAssertIntEquals(tc, (1 << (MM_BUDDY_SHIFT)) - 16, uut.free_nr);
 
     mm_buddy_init(&uut, 16);
-    CuAssertIntEquals(tc, (1 << (MM_BUDDY_SHIFT - 1)) - 16, uut.free_nr);
+    CuAssertIntEquals(tc, (1 << (MM_BUDDY_SHIFT)) - 16, uut.free_nr);
 
     free(uut.tree);
 }
@@ -27,7 +27,7 @@ mm_buddy_alloc_test(CuTest *tc)
     Buddy uut;
     uut.tree = malloc(MM_BUDDY_TREE_SIZE);
 
-    int total = (1 << (MM_BUDDY_SHIFT - 1));
+    int total = (1 << (MM_BUDDY_SHIFT));
 
     mm_buddy_init(&uut, 0);
 

@@ -62,6 +62,7 @@ sb_link(SBNode *node, SBNode *parent, SBNode **link, SBTree *tree)
 static inline SBNode *
 sb_leftmost(SBNode *node)
 {
+    if (!node) return NULL;
     while (node->left) {
         node = node->left;
     }
@@ -71,6 +72,7 @@ sb_leftmost(SBNode *node)
 static inline SBNode *
 sb_rightmost(SBNode *node)
 {
+    if (!node) return NULL;
     while (node->right) {
         node = node->right;
     }
@@ -126,26 +128,26 @@ sb_next(SBNode *node)
 static inline void
 sb_replace(SBNode *dst, SBNode *src)
 {
-    dst->tree = src->tree;
-    dst->parent = src->parent;
-    dst->left = src->left;
-    dst->right = src->right;
-    dst->size = src->size;
+    src->tree = dst->tree;
+    src->parent = dst->parent;
+    src->left = dst->left;
+    src->right = dst->right;
+    src->size = dst->size;
 
-    if (dst->parent) {
-        if (sb_is_left(src)) {
-            dst->parent->left = dst;
+    if (src->parent) {
+        if (sb_is_left(dst)) {
+            src->parent->left = src;
         }
         else {
-            dst->parent->right = dst;
+            src->parent->right = src;
         }
     }
     else {
-        dst->tree->root = dst;
+        src->tree->root = src;
     }
 
-    if (dst->left)  dst->left->parent = dst;
-    if (dst->right) dst->right->parent = dst;
+    if (src->left)  src->left->parent = src;
+    if (src->right) src->right->parent = src;
 }
 
 SBNode *sb_unlink(SBNode *node);

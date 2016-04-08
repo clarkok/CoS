@@ -84,24 +84,47 @@ _proc_insert_into_queues(Process *proc)
 void init_proc();
 
 static Process *
-_proc_construct_init()
+process_new(const char *p_name, Process *parent)
 {
     Process *new_proc = malloc(sizeof(Process));
     new_proc->kernel_stack = malloc(PAGE_SIZE);
-    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene) - 4;
+    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene);
     new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
+    new_proc->current_scene->last_scene = 0;
     new_proc->id = ++_proc_id;
-    new_proc->parent = 0;
     new_proc->state = PS_READY;
-    strncpy(new_proc->name, "init", PROC_NAME_LENGTH);
+    strncpy(new_proc->name, p_name, PROC_NAME_LENGTH);
     new_proc->priv_base = PRIV_NORMAL;
     new_proc->priv_offset = 0;
     new_proc->ticks = 0;
-    mm_init_proc(&new_proc->mm);
+    new_proc->parent = parent;
+    list_init(&new_proc->children);
+    list_init(&new_proc->messages);
+    new_proc->waiting_for = 0;
 
-    ProcScene *scene = proc_current_scene(new_proc);
-    memset(scene, 0, sizeof(ProcScene));
-    scene->pc = proc_kernel_thread(init_proc);
+    if (parent) {
+        list_append(&parent->children, &new_proc->_child_link);
+        mm_duplicate(&new_proc->mm, &parent->mm);
+        memcpy(proc_current_scene(new_proc), proc_current_scene(parent), sizeof(ProcScene) - 4);    // for last_scene
+        proc_current_scene(new_proc)->regs[1] = 0;
+    }
+    else {
+        mm_init_proc(&new_proc->mm);
+        memset(proc_current_scene(new_proc), 0, sizeof(ProcScene));
+    }
+
+    _proc_insert(&proc_tree, new_proc);
+    _proc_insert_into_queues(new_proc);
+
+    return new_proc;
+}
+
+static Process *
+_proc_construct_init()
+{
+    Process *new_proc = process_new("init", NULL);
+
+    new_proc->current_scene->pc = proc_kernel_thread(init_proc);
 
     return new_proc;
 }
@@ -120,9 +143,6 @@ proc_init()
     list_init(&proc_realtime_queue);
 
     Process *init_proc = _proc_construct_init();
-
-    _proc_insert(&proc_tree, init_proc);
-    _proc_insert_into_queues(init_proc);
 
     proc_schedule();    // update states
 
@@ -190,34 +210,7 @@ proc_schedule()
 
 int
 proc_do_fork()
-{
-    Process *current = current_process;
-
-    Process *new_proc = malloc(sizeof(Process));
-    new_proc->kernel_stack = malloc(PAGE_SIZE);
-    assert(new_proc->kernel_stack);
-
-    new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene) - 4;
-    new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
-
-    new_proc->id = ++_proc_id;
-    new_proc->parent = current->id;
-    new_proc->state = PS_READY;
-    strncpy(new_proc->name, current->name, PROC_NAME_LENGTH);
-    new_proc->priv_base = current->priv_base;
-    new_proc->priv_offset = 0;
-    new_proc->ticks = current->ticks >> 1;
-    current->ticks -= new_proc->ticks;
-
-    mm_duplicate(&new_proc->mm, &current->mm);
-    memcpy(proc_current_scene(new_proc), proc_current_scene(current), sizeof(ProcScene));
-    proc_current_scene(new_proc)->regs[1] = 0;    // set $v0 to 0
-
-    _proc_insert_into_queues(new_proc);
-    _proc_insert(&proc_tree, new_proc);
-
-    return new_proc->id;
-}
+{ return process_new(current_process->name, current_process)->id; }
 
 int
 proc_do_get_pid()

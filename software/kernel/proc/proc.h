@@ -29,6 +29,7 @@ typedef struct ProcScene
     size_t regs[31];
     size_t lo;
     size_t hi;
+    struct ProcScene *last_scene;
 } ProcScene;
 
 #define PROC_NAME_LENGTH 11
@@ -42,16 +43,12 @@ typedef struct Process
 
     LinkedNode _link;
     SBNode _node;
+    LinkedNode _child_link;
 
     /**
      * Process ID
      */
     size_t id;
-
-    /**
-     * Parent process ID
-     */
-    size_t parent;
 
     /**
      * current state
@@ -80,6 +77,19 @@ typedef struct Process
      * ticks remains
      */
     size_t ticks;
+
+    /**
+     * Pointer to Parent
+     */
+    struct Process *parent;
+
+    /**
+     * Children list
+     */
+    LinkedList children;
+
+    LinkedList messages;
+    int waiting_for;
 
     MemoryManagement mm;
 } Process;

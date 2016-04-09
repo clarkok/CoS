@@ -27,6 +27,9 @@ typedef struct SBTree
     } while (0)
 
 #define sb_get(ptr, type, mem)      container_of(ptr, type, mem)
+#define sb_from_node(node)          ((node)->tree)
+#define sb_node_linked(node)        (sb_from_node(node))
+#define sb_node_init(node)          ((node)->tree = NULL)
 #define SB_TREE_INIT                {NULL, 0}
 
 #define sb_head(tree)       (sb_leftmost((tree)->root))

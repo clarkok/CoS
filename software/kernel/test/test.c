@@ -9,6 +9,18 @@
 #include "test/mm/linked-buddy-test.c"
 
 int
+kprintf(const char *format, ...)
+{
+    /*
+    va_list vl;
+    va_start(vl, format);
+    return vprintf(format, vl);
+    */
+    (void)format;
+    return 0;
+}
+
+int
 main()
 {
     CuString *output = CuStringNew();

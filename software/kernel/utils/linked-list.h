@@ -21,7 +21,8 @@ typedef struct LinkedList
 
 #define list_get(ptr, type, list)   container_of(ptr, type, list)
 #define list_from_node(node)        ((node)->list)
-#define list_node_linked(ptr)       ((ptr)->list)
+#define list_node_linked(node)      (list_from_node(node))
+#define list_node_init(node)        ((node)->list = NULL)
 
 #define list_head(list) ((list)->head)
 #define list_tail(list) container_of((list)->tail, LinkedNode, next)

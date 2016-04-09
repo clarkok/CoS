@@ -162,17 +162,18 @@ k_msg_wait_for(size_t src)
 }
 
 static inline int
-k_msg_recv_for(size_t src, char *buffer)
+k_msg_recv_for(size_t src, size_t *actual_src, char *buffer)
 {
     int ret;
 
     __asm__ volatile (
+            "move $a3, %3\n\t"
             "move $a2, %2\n\t"
             "move $a1, %1\n\t"
             "addiu $a0, $zero, 11\n\t"
             "syscall\n\t"
             "move %0, $v0"
-            : "=r"(ret) : "r"(src), "r"(buffer)
+            : "=r"(ret) : "r"(src), "r"(actual_src), "r"(buffer)
         );
 
     return ret;
@@ -188,6 +189,36 @@ k_get_msg_nr()
             "syscall\n\t"
             "move %0, $v0"
             : "=r"(ret) :
+        );
+
+    return ret;
+}
+
+static inline void
+k_exit(int retval)
+{
+    __asm__ volatile (
+            "move $a1, %0\n\t"
+            "addiu $a0, $zero, 13\n\t"
+            "syscall"
+            : : "r"(retval)
+        );
+
+    assert(0);
+}
+
+static inline int
+k_collect(size_t child_pid, int *retval)
+{
+    int ret;
+
+    __asm__ volatile (
+            "move $a2, %2\n\t"
+            "move $a1, %1\n\t"
+            "addiu $a0, $zero, 14"
+            "syscall\n\t"
+            "move %0, $v0"
+            : "=r"(ret) : "r"(child_pid), "r"(retval)
         );
 
     return ret;

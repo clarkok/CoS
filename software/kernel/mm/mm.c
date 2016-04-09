@@ -270,96 +270,6 @@ mm_init()
     mm_shared_init();
 }
 
-void *
-malloc(size_t size)
-{
-    if (size > (PAGE_SIZE >> 1)) {
-        int page_count = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
-        int page = mm_buddy_alloc(&buddy, page_count);
-        assert(page != MM_INVALID_PAGE);
-
-        _mm_set_kernel_page_table(
-                kernel_mm.page_table,
-                page + (KERNEL_START >> PAGE_SHIFT),
-                page,
-                page_count,
-                1
-            );
-        mm_update_mmu();
-        MMPageGroup *pg = (MMPageGroup*)mm_slab_alloc(&kernel_slab, sizeof(MMPageGroup));
-        pg->v_page_start = page + (KERNEL_START >> PAGE_SHIFT);
-        pg->p_page_start = page;
-        pg->page_count = page_count;
-        pg->type = MM_EMPTY;
-        _mm_page_group_insert(&kernel_mm.page_groups, pg);
-
-        return (void*)(KERNEL_START + (page << PAGE_SHIFT));
-    }
-    else {
-        void *ret = mm_slab_alloc(&kernel_slab, size);
-
-        while (list_size(&pages_for_slab) < MIN_PAGES_FOR_SLAB) {
-            int page = mm_buddy_alloc(&buddy, 1);
-            assert(page != MM_INVALID_PAGE);
-
-            _mm_set_kernel_page_table(
-                    kernel_mm.page_table,
-                    page + (KERNEL_START >> PAGE_SHIFT),
-                    page,
-                    1,
-                    1
-                );
-            mm_update_mmu();
-
-            MMPageGroup *pg = (MMPageGroup*)mm_slab_alloc(&kernel_slab, sizeof(MMPageGroup));
-            pg->v_page_start = page + (KERNEL_START >> PAGE_SHIFT);
-            pg->p_page_start = page;
-            pg->page_count = 1;
-            pg->type = MM_EMPTY;
-            _mm_page_group_insert(&kernel_mm.page_groups, pg);
-
-            MMPageForSlab *page_for_slab = (MMPageForSlab*)(KERNEL_START + (page << PAGE_SHIFT));
-            list_append(&pages_for_slab, page_for_slab);
-        }
-
-        return ret;
-    }
-}
-
-void
-free(void *ptr)
-{
-    if (!((size_t)ptr & (PAGE_SIZE - 1))) {
-        int page = ((size_t)ptr - KERNEL_START) >> PAGE_SHIFT;
-        MMPageGroup *pg = _mm_page_group_find(&kernel_mm.page_groups, page);
-        _mm_reset_kernel_page_table(
-                kernel_mm.page_table,
-                pg->v_page_start,
-                pg->page_count
-            );
-        mm_update_mmu();
-        sb_unlink(&pg->_node);
-        mm_slab_free(&kernel_slab, pg);
-    }
-    else {
-        mm_slab_free(&kernel_slab, ptr);
-
-        while (list_size(&pages_for_slab) > MAX_PAGES_FOR_SLAB) {
-            MMPageForSlab *page_for_slab = list_unlink(list_tail(&pages_for_slab));
-            int page = ((size_t)page_for_slab - KERNEL_START) >> PAGE_SHIFT;
-            MMPageGroup *pg = _mm_page_group_find(&kernel_mm.page_groups, page);
-            _mm_reset_kernel_page_table(
-                    kernel_mm.page_table,
-                    pg->v_page_start,
-                    pg->page_count
-                );
-            sb_unlink(&pg->_node);
-            mm_slab_free(&kernel_slab, pg);
-        }
-        mm_update_mmu();
-    }
-}
-
 void
 mm_init_proc(MemoryManagement *mm)
 {
@@ -406,7 +316,7 @@ mm_destroy_proc(MemoryManagement *mm)
         node = next;
     }
 
-    for (size_t i = 0; i < KERNEL_START_PAGE; ++i) {
+    for (size_t i = 0; i < mm_get_dir_from_page(KERNEL_START_PAGE); ++i) {
         if (mm->page_table[i].valid) {
             mm_buddy_free(&buddy, mm->page_table[i].page_ent);
         }
@@ -598,4 +508,96 @@ mm_pagefault_handler()
     }
 
     log_out("PFH");
+}
+
+void *
+malloc(size_t size)
+{
+    if (size > (PAGE_SIZE >> 1)) {
+        int page_count = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+        int page = mm_buddy_alloc(&buddy, page_count);
+        assert(page != MM_INVALID_PAGE);
+
+        _mm_set_kernel_page_table(
+                kernel_mm.page_table,
+                page + (KERNEL_START >> PAGE_SHIFT),
+                page,
+                page_count,
+                1
+            );
+        mm_update_mmu();
+        MMPageGroup *pg = (MMPageGroup*)mm_slab_alloc(&kernel_slab, sizeof(MMPageGroup));
+        pg->v_page_start = page + (KERNEL_START >> PAGE_SHIFT);
+        pg->p_page_start = page;
+        pg->page_count = page_count;
+        pg->type = MM_EMPTY;
+        _mm_page_group_insert(&kernel_mm.page_groups, pg);
+
+        return (void*)(KERNEL_START + (page << PAGE_SHIFT));
+    }
+    else {
+        void *ret = mm_slab_alloc(&kernel_slab, size);
+
+        while (list_size(&pages_for_slab) < MIN_PAGES_FOR_SLAB) {
+            int page = mm_buddy_alloc(&buddy, 1);
+            assert(page != MM_INVALID_PAGE);
+
+            _mm_set_kernel_page_table(
+                    kernel_mm.page_table,
+                    page + (KERNEL_START >> PAGE_SHIFT),
+                    page,
+                    1,
+                    1
+                );
+            mm_update_mmu();
+
+            MMPageGroup *pg = (MMPageGroup*)mm_slab_alloc(&kernel_slab, sizeof(MMPageGroup));
+            pg->v_page_start = page + (KERNEL_START >> PAGE_SHIFT);
+            pg->p_page_start = page;
+            pg->page_count = 1;
+            pg->type = MM_EMPTY;
+            _mm_page_group_insert(&kernel_mm.page_groups, pg);
+
+            MMPageForSlab *page_for_slab = (MMPageForSlab*)(KERNEL_START + (page << PAGE_SHIFT));
+            list_append(&pages_for_slab, page_for_slab);
+        }
+
+        return ret;
+    }
+}
+
+void
+free(void *ptr)
+{
+    if (!((size_t)ptr & (PAGE_SIZE - 1))) {
+        int page = ((size_t)ptr) >> PAGE_SHIFT;
+        MMPageGroup *pg = _mm_page_group_find(&kernel_mm.page_groups, page);
+
+        _mm_reset_kernel_page_table(
+                kernel_mm.page_table,
+                pg->v_page_start,
+                pg->page_count
+            );
+
+        mm_update_mmu();
+        sb_unlink(&pg->_node);
+        mm_slab_free(&kernel_slab, pg);
+    }
+    else {
+        mm_slab_free(&kernel_slab, ptr);
+
+        while (list_size(&pages_for_slab) > MAX_PAGES_FOR_SLAB) {
+            MMPageForSlab *page_for_slab = list_unlink(list_tail(&pages_for_slab));
+            int page = ((size_t)page_for_slab - KERNEL_START) >> PAGE_SHIFT;
+            MMPageGroup *pg = _mm_page_group_find(&kernel_mm.page_groups, page);
+            _mm_reset_kernel_page_table(
+                    kernel_mm.page_table,
+                    pg->v_page_start,
+                    pg->page_count
+                );
+            sb_unlink(&pg->_node);
+            mm_slab_free(&kernel_slab, pg);
+        }
+        mm_update_mmu();
+    }
 }

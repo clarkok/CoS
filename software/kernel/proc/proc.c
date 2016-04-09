@@ -4,6 +4,7 @@
 #include "core/kernel.h"
 
 #include "proc.h"
+#include "message.h"
 
 #define proc_kernel_thread(func)    (((size_t)(func)) + 1)
 
@@ -82,8 +83,6 @@ _proc_insert_into_queues(Process *proc)
     }
 }
 
-void init_proc();
-
 static Process *
 process_new(const char *p_name, Process *parent)
 {
@@ -92,8 +91,12 @@ process_new(const char *p_name, Process *parent)
     new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene);
     new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
     new_proc->current_scene->last_scene = 0;
+    list_node_init(&new_proc->_link);
+    sb_node_init(&new_proc->_node);
+    list_node_init(&new_proc->_child_link);
     new_proc->id = ++_proc_id;
     new_proc->state = PS_READY;
+    new_proc->retval = 0;
     strncpy(new_proc->name, p_name, PROC_NAME_LENGTH);
     new_proc->priv_base = PRIV_NORMAL;
     new_proc->priv_offset = 0;
@@ -119,6 +122,55 @@ process_new(const char *p_name, Process *parent)
 
     return new_proc;
 }
+
+static int
+process_destroy(Process *proc)
+{
+    assert(proc);
+    assert(sb_node_linked(&proc->_node));
+
+    int ret = proc->retval;
+
+    Process *parent = proc->parent;
+
+    mm_destroy_proc(&proc->mm);
+    while (list_size(&proc->messages)) {
+        Message *msg = list_get(list_unlink(list_head(&proc->messages)), Message, _link);
+        if (msg->src == SIGNAL_SRC) {
+            if (*(SignalType*)(msg->content) == ST_CHILD_TERM) {
+                list_append(&parent->messages, &msg->_link);
+                continue;
+            }
+        }
+        free(msg);
+    }
+
+    while (list_size(&proc->children)) {
+        Process *child = list_get(
+                                list_unlink(list_head(&proc->children)),
+                                Process,
+                                _child_link
+                            );
+        list_append(&parent->children, &child->_child_link);
+        child->parent = parent;
+    }
+
+    parent->ticks += proc->ticks;
+
+    list_unlink(&proc->_child_link);
+    sb_unlink(&proc->_node);
+
+    if (list_node_linked(&proc->_link)) {
+        list_unlink(&proc->_link);
+    }
+
+    free(proc->kernel_stack);
+    free(proc);
+
+    return ret;
+}
+
+void init_proc();
 
 static Process *
 _proc_construct_init()
@@ -156,7 +208,7 @@ void
 proc_schedule()
 {
     dbg_uart_str("schedule ");
-
+    assert(list_size(&proc_normal_queue) || list_size(&proc_normal_noticks_queue));
     Process *proc_to_run = NULL;
     if (list_size(&proc_realtime_queue)) {
         proc_to_run = list_get(list_head(&proc_realtime_queue), Process, _link);
@@ -252,6 +304,27 @@ proc_unblock(size_t pid, size_t retval)
     proc_request_schedule = 1;
 }
 
+void
+proc_zombie(Process *proc, int retval)
+{
+    assert(proc);
+
+    proc->state = PS_ZOMBIE;
+    proc->retval = retval;
+
+    if (list_node_linked(&proc->_link)) {
+        list_unlink(&proc->_link);
+    }
+
+    assert(proc->parent && "Init process should not be terminated");
+
+    SignalChildTerm sig;
+    sig.type = ST_CHILD_TERM;
+    sig.child_pid = proc->id;
+
+    proc_msg_signal(proc->parent->id, sizeof(sig), &sig);
+}
+
 int
 proc_do_fork()
 { return process_new(current_process->name, current_process)->id; }
@@ -267,3 +340,21 @@ proc_do_set_pname(const char *name)
 size_t
 proc_do_get_proc_nr()
 { return sb_size(&proc_tree); }
+
+void
+proc_do_exit(int retval)
+{ proc_zombie(current_process, retval); }
+
+int
+proc_do_collect(size_t pid, int *retval)
+{
+    Process *proc = proc_get_by_id(pid);
+
+    if (!proc) { return 0; }
+    if (proc->parent != current_process) { return 0; }
+
+    *retval = process_destroy(proc);
+
+    assert(list_size(&proc_normal_queue) || list_size(&proc_normal_noticks_queue));
+    return 1;
+}

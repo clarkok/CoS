@@ -78,6 +78,7 @@ void
 mm_buddy_free(Buddy *buddy, int page)
 {
     int level = buddy->tree[page + (1 << (MM_BUDDY_SHIFT))].padding;
+
     assert(level);
     buddy->free_nr += (1 << (MM_BUDDY_SHIFT - level));
 

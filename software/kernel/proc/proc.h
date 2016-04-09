@@ -56,6 +56,11 @@ typedef struct Process
     int state;
 
     /**
+     * process return value
+     */
+    int retval;
+
+    /**
      * Process name
      */
     char name[PROC_NAME_LENGTH + 1];
@@ -107,11 +112,14 @@ Process *proc_get_by_id(size_t id);
 
 void proc_block(size_t pid, size_t waiting_for);
 void proc_unblock(size_t pid, size_t retval);
+void proc_zombie(Process *proc, int retval);
 
 int proc_do_fork();
 int proc_do_get_pid();
 void proc_do_set_pname();
 size_t proc_do_get_proc_nr();
+void proc_do_exit(int retval);
+int proc_do_collect(size_t pid, int *retval);
 
 static inline ProcScene *
 proc_current_scene(Process *proc)

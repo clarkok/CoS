@@ -167,6 +167,26 @@ sb_tree_rm_to_empty(CuTest *tc)
     }
 }
 
+void
+sb_tree_rm_to_empty_r(CuTest *tc)
+{
+    SBTree uut = SB_TREE_INIT;
+
+    for (int i = 0; i < 16; ++i) {
+        _sb_tree_test_insert(&uut, i);
+    }
+
+    for (int i = 15; i >= 0; --i) {
+        sb_unlink(_sb_tree_test_find(&uut, i));
+
+        for (int j = 0; j < i; ++j) {
+            CuAssertIntEquals(tc,
+                    j,
+                    sb_get(_sb_tree_test_find(&uut, j), SBTreeTestNode, _node)->number);
+        }
+    }
+}
+
 typedef struct Node
 {
     SBNode _node;
@@ -307,6 +327,7 @@ sb_tree_test_suite(void)
     SUITE_ADD_TEST(suite, sb_tree_zigzag_test);
     SUITE_ADD_TEST(suite, sb_tree_rmroot_test);
     SUITE_ADD_TEST(suite, sb_tree_rm_to_empty);
+    SUITE_ADD_TEST(suite, sb_tree_rm_to_empty_r);
     SUITE_ADD_TEST(suite, sb_tree_bug_test);
 
     return suite;

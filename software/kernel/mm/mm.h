@@ -46,8 +46,8 @@ static_assert(sizeof(PageEnt) == 4, "PageEnt should be size of 4");
 
 void mm_init();
 
-void *malloc(size_t size);
-void free(void *ptr);
+void *kmalloc(size_t size);
+void kfree(void *ptr);
 
 void mm_init_proc(MemoryManagement *mm);
 void mm_destroy_proc(MemoryManagement *mm);

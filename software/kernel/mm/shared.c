@@ -104,7 +104,7 @@ mm_shared_add_ref(size_t p_page_start, size_t page_count, int cow)
         return pages;
     }
     else {
-        SharedPages *new_pages = (SharedPages*)malloc(sizeof(SharedPages));
+        SharedPages *new_pages = (SharedPages*)kmalloc(sizeof(SharedPages));
         new_pages->p_page_start = p_page_start;
         new_pages->page_count = page_count;
         new_pages->ref_count = 1;
@@ -125,7 +125,7 @@ mm_shared_rm_ref(SharedPages *shared_pages)
 
     if (!--(shared_pages->ref_count)) {
         sb_unlink(&shared_pages->_node);
-        free(shared_pages);
+        kfree(shared_pages);
 
         shared_dump();
 

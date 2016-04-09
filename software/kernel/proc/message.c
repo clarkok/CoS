@@ -23,7 +23,7 @@ proc_msg_do_send(size_t dst, size_t length, const void *content)
         return 0;
     }
 
-    Message *new_msg = malloc(sizeof(Message) + length);
+    Message *new_msg = kmalloc(sizeof(Message) + length);
     new_msg->src = current_process->id;
     new_msg->dst = dst;
     new_msg->length = length;
@@ -63,7 +63,7 @@ proc_msg_do_recv_for(size_t src, size_t *actual_src, char *buffer)
                 *actual_src = src;
                 memcpy(buffer, msg->content, msg->length);
                 list_unlink(node);
-                free(msg);
+                kfree(msg);
                 return 1;
             }
         }
@@ -75,7 +75,7 @@ proc_msg_do_recv_for(size_t src, size_t *actual_src, char *buffer)
             *actual_src = msg->src;
             memcpy(buffer, msg->content, msg->length);
             list_unlink(node);
-            free(msg);
+            kfree(msg);
             return 1;
         }
     }
@@ -92,7 +92,7 @@ proc_msg_signal(size_t dst, size_t length, const void *content)
     Process *dst_proc = proc_get_by_id(dst);
     assert(dst_proc);
 
-    Message *new_sig = malloc(sizeof(Message) + length);
+    Message *new_sig = kmalloc(sizeof(Message) + length);
     new_sig->src = SIGNAL_SRC;
     new_sig->dst = dst;
     new_sig->length = length;

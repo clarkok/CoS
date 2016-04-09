@@ -12,7 +12,7 @@ _mm_linked_buddy_get_level_nr(size_t page_nr)
 static inline LinkedBuddyNode *
 _mm_linked_buddy_node_new(int start)
 {
-    LinkedBuddyNode *ret = (LinkedBuddyNode*)malloc(sizeof(LinkedBuddyNode));
+    LinkedBuddyNode *ret = (LinkedBuddyNode*)kmalloc(sizeof(LinkedBuddyNode));
     if (!ret) return NULL;
     ret->start = start;
     return ret;
@@ -21,7 +21,7 @@ _mm_linked_buddy_node_new(int start)
 static inline LinkedBuddyAllocated *
 _mm_linked_buddy_allocated_new(int start, int level)
 {
-    LinkedBuddyAllocated *ret = (LinkedBuddyAllocated*)malloc(sizeof(LinkedBuddyAllocated));
+    LinkedBuddyAllocated *ret = (LinkedBuddyAllocated*)kmalloc(sizeof(LinkedBuddyAllocated));
     if (!ret) return NULL;
     ret->start = start;
     ret->level = level;
@@ -94,7 +94,7 @@ LinkedBuddy *
 mm_linked_buddy_new(size_t page_nr)
 {
     int level_nr = _mm_linked_buddy_get_level_nr(page_nr);
-    LinkedBuddy *lbuddy = (LinkedBuddy*)malloc(sizeof(LinkedBuddy) + sizeof(LinkedList) * level_nr);
+    LinkedBuddy *lbuddy = (LinkedBuddy*)kmalloc(sizeof(LinkedBuddy) + sizeof(LinkedList) * level_nr);
 
     if (!lbuddy) return NULL;
 
@@ -115,7 +115,7 @@ mm_linked_buddy_new(size_t page_nr)
 LinkedBuddy *
 mm_linked_buddy_dup(LinkedBuddy *lbuddy)
 {
-    LinkedBuddy *ret = (LinkedBuddy*)malloc(sizeof(LinkedBuddy) + sizeof(LinkedList) * lbuddy->level_nr);
+    LinkedBuddy *ret = (LinkedBuddy*)kmalloc(sizeof(LinkedBuddy) + sizeof(LinkedList) * lbuddy->level_nr);
     if (!ret) return NULL;
 
     ret->level_nr = lbuddy->level_nr;
@@ -123,7 +123,7 @@ mm_linked_buddy_dup(LinkedBuddy *lbuddy)
 
     sb_for_each(&lbuddy->allocated, node) {
         LinkedBuddyAllocated *allocated = sb_get(node, LinkedBuddyAllocated, _node);
-        LinkedBuddyAllocated *new_alloc = malloc(sizeof(LinkedBuddyAllocated));
+        LinkedBuddyAllocated *new_alloc = kmalloc(sizeof(LinkedBuddyAllocated));
 
         new_alloc->start = allocated->start;
         new_alloc->level = allocated->level;
@@ -136,7 +136,7 @@ mm_linked_buddy_dup(LinkedBuddy *lbuddy)
 
         list_for_each(lbuddy->head + i, node) {
             LinkedBuddyNode *buddy_node = list_get(node, LinkedBuddyNode, _link),
-                            *new_node = malloc(sizeof(LinkedBuddyNode));
+                            *new_node = kmalloc(sizeof(LinkedBuddyNode));
 
             new_node->start = buddy_node->start;
             list_append(ret->head + i, &new_node->_link);
@@ -154,10 +154,10 @@ mm_linked_buddy_destroy(LinkedBuddy *lbuddy)
     for (int i = 0; i < lbuddy->level_nr; ++i) {
         while (list_size(lbuddy->head + i)) {
             LinkedNode *node = list_unlink(list_head(lbuddy->head + i));
-            free(list_get(node, LinkedBuddyNode, _link));
+            kfree(list_get(node, LinkedBuddyNode, _link));
         }
     }
-    free(lbuddy);
+    kfree(lbuddy);
 }
 
 int
@@ -202,7 +202,7 @@ mm_linked_buddy_alloc(LinkedBuddy *lbuddy, size_t page_nr)
     _mm_linked_buddy_allocated_insert(&lbuddy->allocated, allocated);
 
     int ret = node->start;
-    free(node);
+    kfree(node);
 
     lbuddy->free_nr -= _mm_linked_buddy_page_per_level(level, lbuddy->level_nr);
     return ret;
@@ -274,7 +274,7 @@ mm_linked_buddy_alloc_hint(LinkedBuddy *lbuddy, size_t page_nr, int hint)
     _mm_linked_buddy_allocated_insert(&lbuddy->allocated, allocated);
 
     int ret = node->start;
-    free(node);
+    kfree(node);
 
     lbuddy->free_nr -= _mm_linked_buddy_page_per_level(level, lbuddy->level_nr);
     return ret;
@@ -288,7 +288,7 @@ mm_linked_buddy_free(LinkedBuddy *lbuddy, int page)
 
     int level = allocated->level;
     sb_unlink(&allocated->_node);
-    free(allocated);
+    kfree(allocated);
 
     LinkedBuddyNode *node = _mm_linked_buddy_node_new(page);
     _mm_linked_buddy_insert_order(lbuddy->head + level, node);
@@ -320,12 +320,12 @@ mm_linked_buddy_free(LinkedBuddy *lbuddy, int page)
         list_unlink(&buddy->_link);
 
         if (buddy->start < node->start) {
-            free(node);
+            kfree(node);
             node = buddy;
             page = buddy->start;
         }
         else {
-            free(buddy);
+            kfree(buddy);
         }
 
         _mm_linked_buddy_insert_order(lbuddy->head + --level, node);

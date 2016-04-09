@@ -86,8 +86,8 @@ _proc_insert_into_queues(Process *proc)
 static Process *
 process_new(const char *p_name, Process *parent)
 {
-    Process *new_proc = malloc(sizeof(Process));
-    new_proc->kernel_stack = malloc(PAGE_SIZE);
+    Process *new_proc = kmalloc(sizeof(Process));
+    new_proc->kernel_stack = kmalloc(PAGE_SIZE);
     new_proc->kernel_stack_top = new_proc->kernel_stack + PAGE_SIZE - sizeof(ProcScene);
     new_proc->current_scene = (volatile ProcScene*)new_proc->kernel_stack_top;
     new_proc->current_scene->last_scene = 0;
@@ -142,7 +142,7 @@ process_destroy(Process *proc)
                 continue;
             }
         }
-        free(msg);
+        kfree(msg);
     }
 
     while (list_size(&proc->children)) {
@@ -164,8 +164,8 @@ process_destroy(Process *proc)
         list_unlink(&proc->_link);
     }
 
-    free(proc->kernel_stack);
-    free(proc);
+    kfree(proc->kernel_stack);
+    kfree(proc);
 
     return ret;
 }

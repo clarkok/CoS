@@ -246,7 +246,7 @@ mm_init()
     sb_init(&kernel_mm.page_groups);
 
     // register reserved pages in kernel_mm.page_groups
-    MMPageGroup *pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
+    MMPageGroup *pg = (MMPageGroup*)kmalloc(sizeof(MMPageGroup));
     pg->v_page_start = (KERNEL_START >> PAGE_SHIFT);
     pg->p_page_start = 0;
     pg->page_count = _MM_BUDDY_RESERVED;
@@ -255,7 +255,7 @@ mm_init()
 
     // register all pre-allocated pages for slab in kernel_mm.page_groups
     for (int i = 0; i < MAX_PAGES_FOR_SLAB; ++i) {
-        pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
+        pg = (MMPageGroup*)kmalloc(sizeof(MMPageGroup));
         pg->v_page_start = (KERNEL_START >> PAGE_SHIFT) + page_for_slab[i];
         pg->p_page_start = page_for_slab[i];
         pg->page_count = 1;
@@ -312,7 +312,7 @@ mm_destroy_proc(MemoryManagement *mm)
         }
 
         SBNode *next = sb_next(node);
-        free(sb_get(sb_unlink(node), Process, _node));
+        kfree(sb_get(sb_unlink(node), Process, _node));
         node = next;
     }
 
@@ -343,7 +343,7 @@ mm_duplicate(MemoryManagement *dst, MemoryManagement *src)
                 }
             case MM_COW:
                 {
-                    MMPageGroup *new_pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
+                    MMPageGroup *new_pg = (MMPageGroup*)kmalloc(sizeof(MMPageGroup));
                     assert(new_pg);
                     new_pg->v_page_start = pg->v_page_start;
                     new_pg->p_page_start = pg->p_page_start;
@@ -394,7 +394,7 @@ mm_do_mmap_empty(size_t size, size_t hint)
         return NULL;
     }
 
-    MMPageGroup *pg = (MMPageGroup*)malloc(sizeof(MMPageGroup));
+    MMPageGroup *pg = (MMPageGroup*)kmalloc(sizeof(MMPageGroup));
     pg->v_page_start = v_page;
     pg->p_page_start = p_page;
     pg->page_count = page_nr;
@@ -439,7 +439,7 @@ mm_do_munmap(void *ptr)
     _mm_reset_page_table(mm->page_table, pg->v_page_start, pg->page_count);
 
     sb_unlink(&pg->_node);
-    free(pg);
+    kfree(pg);
 
     mm_update_mmu();
 }
@@ -466,19 +466,21 @@ mm_pagefault_handler()
     MMPageGroup *pg = _mm_page_group_lookup(&mm->page_groups, pagefault_addr >> PAGE_SHIFT);
 
     if (!pg) {
-        // TODO terminate current_process
         kprintf("pagefault addr: 0x%x, current process 0x%x", pagefault_addr, current_process->id);
-
-        assert(false && "Should terminate current process");
+        assert(current_process->id != 1);
+        proc_zombie(current_process, 255);
+        proc_request_schedule = 1;
+        return;
     }
 
     switch (pg->type) {
         case MM_EMPTY:
-            // TODO terminate current_process
             dbg_uart_str("Current pid: ");
             dbg_uart_hex(current_process->id);
 
-            assert(false && "Should terminate current process");
+            assert(current_process->id != 1);
+            proc_zombie(current_process, 255);
+            proc_request_schedule = 1;
             break;
         case MM_COW:
             if (pg->i_shared_page->ref_count == 1) {
@@ -511,7 +513,7 @@ mm_pagefault_handler()
 }
 
 void *
-malloc(size_t size)
+kmalloc(size_t size)
 {
     if (size > (PAGE_SIZE >> 1)) {
         int page_count = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
@@ -567,7 +569,7 @@ malloc(size_t size)
 }
 
 void
-free(void *ptr)
+kfree(void *ptr)
 {
     if (!((size_t)ptr & (PAGE_SIZE - 1))) {
         int page = ((size_t)ptr) >> PAGE_SHIFT;

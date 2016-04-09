@@ -20,6 +20,14 @@ kprintf(const char *format, ...)
     return 0;
 }
 
+void *
+kmalloc(size_t size)
+{ return malloc(size); }
+
+void
+kfree(void *ptr)
+{ free(ptr); }
+
 int
 main()
 {

@@ -1,10 +1,17 @@
 #include <string.h>
+#include <stdlib.h>
+
+#include "init_proc.h" 
 
 #include "lib/sysapi.h"
 #include "lib/kernelio.h"
 
-void
-init_proc()
+#include "driver/disk.h"
+
+LinkedList init_proc_queue;
+
+int
+init_proc(void)
 {
     k_printf(
             "Hello to init proc!\n"
@@ -14,49 +21,55 @@ init_proc()
 
     if (!k_fork()) {
         k_set_pname("sys_idle");
+        k_request_lowest();
         for (;;) ;
     }
 
-    int child_pid = k_fork();
-
-    if (child_pid) {
-        while (1) {
-            size_t msg_length = k_msg_wait_for(0);
-            char *msg_content = k_mmap_empty(msg_length, -1);
-            size_t src;
-
-            k_msg_recv_for(0, &src, msg_content);
-
-            if (src == 0xFFFFFFFFu) {
-                if (((size_t*)(msg_content))[0] == 2) {
-                    k_printf("Children 0x%x turned to zombie, I must destroy it\n", 
-                            ((size_t*)(msg_content))[1]
-                        );
-                    int retval,
-                        result;
-
-                    result = k_collect(((size_t*)(msg_content))[1], &retval);
-                    assert(result);
-
-                    k_printf("Children 0x%x last word is 0x%x\n", ((size_t*)(msg_content))[1], retval);
-                }
-            }
-
-            k_munmap(msg_content);
-        }
-    }
-    else {
-        k_printf("I am the lonely children. I would die after a was born\n");
-
-        if (k_fork()) {
-            k_printf("Now I will go die\n");
-            k_exit(8);
-        }
-        else {
-            k_exit(9);
+    while (list_size(&init_proc_queue)) {
+        InitProcRequest *req = list_get(list_unlink(list_head(&init_proc_queue)), InitProcRequest, _linked);
+        if (!k_fork()) {
+            k_set_pname(req->name);
+            kernel_thread entry = req->entry;
+            kfree(req);
+            k_exit(entry());
         }
     }
 
-    for (;;) {
+    char buffer[512] = "test_hello";
+    int counter = 0;
+
+    k_giveup();
+    while (!disk_write_async(0, 65535, buffer)) {
+        ++counter;
+        k_giveup();
+    }
+
+    k_printf("sent write request at attempt 0x%x\n", counter);
+
+    size_t sender = 0;
+    size_t msg_size = k_msg_wait_for(disk_get_pid());
+    assert(msg_size == sizeof(DiskResponseMessage));
+    DiskResponseMessage *res = malloc(msg_size);
+    k_msg_recv_for(disk_get_pid(), &sender, (char*)res);
+    assert(res->status_code == DS_OK);
+    free(res);
+
+    disk_read_async(0, 65535);
+    msg_size = k_msg_wait_for(disk_get_pid());
+    assert(msg_size == sizeof(DiskResponseMessage) + DISK_BLOCK_SIZE);
+    res = malloc(msg_size);
+    k_msg_recv_for(disk_get_pid(), &sender, (char*)res);
+    assert(res->status_code == DS_OK);
+    assert(memcmp(buffer, res->content, DISK_BLOCK_SIZE) == 0);
+    free(res);
+
+    k_printf("write & read succeed!\n");
+
+    while (true) {
+        size_t sender = 0;
+        size_t msg_size = k_msg_wait_for(0);
+        char *buffer = k_mmap_empty(msg_size, 0);
+        k_msg_recv_for(0, &sender, buffer);
+        k_munmap(buffer);
     }
 }

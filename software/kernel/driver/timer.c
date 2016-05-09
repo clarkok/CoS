@@ -25,7 +25,7 @@ timer_handler()
 void
 timer_init()
 {
-    dbg_uart_str("Timer init\n");
+    kprintf("Timer init\n");
     INTERRUPT_HANDLER_TABLE[INT_TIMER] = (size_t)(&timer_handler);
     enable_int(INT_TIMER);
 }

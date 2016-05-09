@@ -224,4 +224,22 @@ k_collect(size_t child_pid, int *retval)
     return ret;
 }
 
+static inline void
+k_giveup()
+{
+    __asm__ volatile (
+            "addiu $a0, $zero, 15"
+            "syscall\n\t"
+        );
+}
+
+static inline void
+k_request_lowest()
+{
+    __asm__ volatile (
+            "addiu $a0, $zero, 16"
+            "syscall\n\t"
+        );
+}
+
 #endif

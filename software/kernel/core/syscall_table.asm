@@ -17,3 +17,5 @@ SYSCALL_TABLE:
     .4byte  (proc_msg_do_get_msg_nr)    # 12
     .4byte  (proc_do_exit)              # 13
     .4byte  (proc_do_collect)           # 14
+    .4byte  (proc_do_giveup)            # 15
+    .4byte  (proc_do_request_lowest)    # 16

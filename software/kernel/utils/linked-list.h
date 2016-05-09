@@ -47,19 +47,6 @@ void list_init(LinkedList *list)
     list->size = 0;
 }
 
-static inline void
-list_move(LinkedList *dst, LinkedList *src)
-{
-    if (list_size(src)) {
-        dst->head       = list_head(src);
-        dst->head->prev = &(dst)->head;
-        dst->tail       = &(list_tail(src)->next);
-    }
-    else {
-        list_init(dst);
-    }
-}
-
 static inline LinkedNode *
 list_append(LinkedList *list, LinkedNode *node)
 {
@@ -139,6 +126,15 @@ list_unlink(LinkedNode *node)
     --node->list->size;
     node->list = NULL;
     return node;
+}
+
+static inline void
+list_move(LinkedList *dst, LinkedList *src)
+{
+    list_init(dst);
+    while (list_size(src)) {
+        list_append(dst, list_unlink(list_head(src)));
+    }
 }
 
 #endif 

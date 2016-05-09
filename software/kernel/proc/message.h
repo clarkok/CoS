@@ -28,13 +28,15 @@ typedef struct Message
     char content[0];
 } Message;
 
-int proc_msg_do_send(size_t dst, size_t length, const void *content);
-size_t proc_msg_do_wait_for(size_t src);
-int proc_msg_do_recv_for(size_t src, size_t *actual_src, char *buffer);
-size_t proc_msg_do_get_msg_nr();
+Message *proc_new_message(size_t src, size_t dst, size_t length);
+int     proc_send_message(Message *msg);
 
-#define SIGNAL_SRC  (0xFFFFFFFFu)
+int     proc_msg_do_send(size_t dst, size_t length, const void *content);
+size_t  proc_msg_do_wait_for(size_t src);
+int     proc_msg_do_recv_for(size_t src, size_t *actual_src, char *buffer);
+size_t  proc_msg_do_get_msg_nr();
 
-void proc_msg_signal(size_t dst, size_t length, const void *content);
+int     proc_msg_signal(size_t dst, size_t length, const void *content);
+int     proc_msg_interrupt(size_t dst, size_t length, const void *content);
 
 #endif

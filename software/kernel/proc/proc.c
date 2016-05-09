@@ -5,6 +5,7 @@
 
 #include "proc.h"
 #include "message.h"
+#include "init_proc.h"
 
 #define proc_kernel_thread(func)    (((size_t)(func)) + 1)
 
@@ -170,8 +171,6 @@ process_destroy(Process *proc)
     return ret;
 }
 
-void init_proc();
-
 static Process *
 _proc_construct_init()
 {
@@ -195,6 +194,8 @@ proc_init()
     list_init(&proc_normal_noticks_queue);
     list_init(&proc_realtime_queue);
 
+    list_init(&init_proc_queue);
+
     Process *init_proc = _proc_construct_init();
     current_process = init_proc;
 
@@ -207,8 +208,6 @@ proc_init()
 void
 proc_schedule()
 {
-    dbg_uart_str("schedule ");
-    assert(list_size(&proc_normal_queue) || list_size(&proc_normal_noticks_queue));
     Process *proc_to_run = NULL;
     if (list_size(&proc_realtime_queue)) {
         proc_to_run = list_get(list_head(&proc_realtime_queue), Process, _link);
@@ -253,6 +252,10 @@ proc_schedule()
 
     assert(proc_to_run);
 
+    if (current_process != proc_to_run) {
+        kprintf("schedule to 0x%x %s\n", proc_to_run->id, proc_to_run->name);
+    }
+
     if (current_process->state == PS_RUNNING) {
         current_process->state = PS_READY;
     }
@@ -260,11 +263,6 @@ proc_schedule()
     mm_set_page_table(&proc_to_run->mm);
     current_process = proc_to_run;
     current_process->state = PS_RUNNING;
-
-    dbg_uart_str("to ");
-    dbg_uart_str(proc_to_run->name);
-    dbg_uart_str(" ");
-    dbg_uart_hex(proc_to_run->id);
 }
 
 Process *
@@ -323,6 +321,18 @@ proc_zombie(Process *proc, int retval)
     sig.child_pid = proc->id;
 
     proc_msg_signal(proc->parent->id, sizeof(sig), &sig);
+
+    proc_request_schedule = 1;
+}
+
+void
+proc_request_init(const char *name, kernel_thread entry)
+{
+    InitProcRequest *req = kmalloc(sizeof(InitProcRequest));
+    req->name = name;
+    req->entry = entry;
+
+    list_append(&init_proc_queue, &req->_linked);
 }
 
 int
@@ -357,4 +367,18 @@ proc_do_collect(size_t pid, int *retval)
 
     assert(list_size(&proc_normal_queue) || list_size(&proc_normal_noticks_queue));
     return 1;
+}
+
+void
+proc_do_giveup()
+{ proc_request_schedule = 1; }
+
+void
+proc_do_request_lowest()
+{
+    current_process->priv_base = PRIV_LOWEST;
+    if (list_node_linked(&current_process->_link)) {
+        list_unlink(&current_process->_link);
+    }
+    _proc_insert_into_queues(current_process);
 }

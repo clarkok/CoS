@@ -781,12 +781,19 @@ trans_directive(char *scan_ptr, int alignment)
     char *label_limit;
 
     if (strncmp(scan_ptr, ".4byte", directive_limit - scan_ptr) == 0) {
-        scan_ptr = parse_chr(directive_limit, '(', line);
+        int has_paran = 0;
+        scan_ptr = directive_limit;
+        if (test_if_chr(scan_ptr, '(')) {
+            has_paran = 1;
+            scan_ptr = parse_chr(scan_ptr, '(', line);
+        }
         scan_ptr = trans_imm(
                 scan_ptr,
                 &current_section->content[current_section->size >> 2]
             );
-        scan_ptr = parse_chr(scan_ptr, ')', line);
+        if (has_paran) {
+            scan_ptr = parse_chr(scan_ptr, ')', line);
+        }
         current_section->size += 4;
         return strpbrk(scan_ptr, "\n");
     }

@@ -30,6 +30,8 @@
 #define KERNEL_START_PAGE   (KERNEL_START >> PAGE_SHIFT)
 #define KERNEL_PAGE_NUMBER  (KERNEL_SPACE_SIZE >> PAGE_SHIFT)
 
+#define DISK_BLOCK_SIZE     (512)
+
 static_assert((1 << MAIN_MEMORY_SHIFT) == MAIN_MEMORY_SIZE, "memory size should match with memory shift");
 static_assert((1 << PAGE_SHIFT) == PAGE_SIZE, "page size should match with page shift");
 

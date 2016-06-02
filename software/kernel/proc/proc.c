@@ -325,16 +325,6 @@ proc_zombie(Process *proc, int retval)
     proc_request_schedule = 1;
 }
 
-void
-proc_request_init(const char *name, kernel_thread entry)
-{
-    InitProcRequest *req = kmalloc(sizeof(InitProcRequest));
-    req->name = name;
-    req->entry = entry;
-
-    list_append(&init_proc_queue, &req->_linked);
-}
-
 int
 proc_do_fork()
 { return process_new(current_process->name, current_process)->id; }

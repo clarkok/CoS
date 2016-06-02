@@ -10,7 +10,7 @@ UTILS_SRC	= utils/sb-tree.c
 PROC_SRC	= proc/proc.c proc/init_proc.c proc/message.c
 DRIVER_SRC	= driver/driver.c driver/timer.c driver/disk.c
 FS_SRC		= fs/fs.c
-SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC) $(DRIVER_SRC)
+SOURCES 	= $(CORE_SRC) $(UTILS_SRC) $(MM_SRC) $(PROC_SRC) $(DRIVER_SRC) $(FS_SRC)
 
 include ../../Makefile.inc
 

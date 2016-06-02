@@ -118,7 +118,6 @@ Process *proc_get_by_id(size_t id);
 void proc_block(size_t pid, size_t waiting_for);
 void proc_unblock(size_t pid, size_t retval);
 void proc_zombie(Process *proc, int retval);
-void proc_request_init(const char *name, kernel_thread entry);
 
 int proc_do_fork();
 int proc_do_get_pid();

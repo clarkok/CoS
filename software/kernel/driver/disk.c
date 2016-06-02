@@ -8,6 +8,7 @@
 
 #include "proc/proc.h"
 #include "proc/message.h"
+#include "proc/init_proc.h"
 #include "utils/linked-list.h"
 
 typedef struct LinkedDiskRequest
@@ -135,6 +136,7 @@ disk_proc(void)
     disk_proc_pid = k_get_pid();
     list_init(&disk_request_queue);
 
+    init_proc_register_name("disk");
     disk_first_primary_partition_info();
 
     while (true) {

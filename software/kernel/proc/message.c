@@ -77,7 +77,9 @@ proc_msg_do_recv_for(size_t src, size_t *actual_src, char *buffer)
         list_for_each(&current_process->messages, node) {
             Message *msg = list_get(node, Message, _link);
             if (msg->src == src) {
-                *actual_src = msg->src;
+                if (actual_src) {
+                    *actual_src = msg->src;
+                }
                 memcpy(buffer, msg->content, msg->length);
                 list_unlink(node);
                 kfree(msg);
@@ -89,7 +91,9 @@ proc_msg_do_recv_for(size_t src, size_t *actual_src, char *buffer)
         if (list_size(&current_process->messages)) {
             LinkedNode *node = list_head(&current_process->messages);
             Message *msg = list_get(node, Message, _link);
-            *actual_src = msg->src;
+            if (actual_src) {
+                *actual_src = msg->src;
+            }
             memcpy(buffer, msg->content, msg->length);
             list_unlink(node);
             kfree(msg);

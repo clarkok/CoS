@@ -25,17 +25,13 @@ init_proc(void)
         for (;;) ;
     }
 
-    /*
-    while (list_size(&init_proc_queue)) {
-        InitProcRequest *req = list_get(list_unlink(list_head(&init_proc_queue)), InitProcRequest, _linked);
+    list_for_each(&init_proc_queue, node) {
+        InitProcRequest *req = list_get(node, InitProcRequest, _linked);
         if (!k_fork()) {
             k_set_pname(req->name);
-            kernel_thread entry = req->entry;
-            kfree(req);
-            k_exit(entry());
+            k_exit(req->entry());
         }
     }
-    */
 
     while (true) {
         size_t sender = 0;

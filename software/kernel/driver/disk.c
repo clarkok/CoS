@@ -36,6 +36,8 @@ static_assert(
 );
 
 volatile size_t disk_proc_pid = 0;
+volatile size_t partition_offset = 0;
+volatile size_t partition_size = 0;
 
 static void
 disk_reply(size_t sender, int request_id, int status_code)
@@ -71,10 +73,21 @@ disk_reply_data(size_t sender, int request_id, int status_code, const char *data
     ((status) & (1 << 29))
 
 #define disk_get_block_from_status(status)              \
-    ((status) & ((1 << 29) - 1))
+    (((status) & ((1 << 29) - 1)) - partition_offset)
 
 static volatile char   * const FLASH_DATA = (volatile char   *)(0xFFFFFC00u);
 static volatile size_t * const FLASH_CTRL = (volatile size_t *)(0xFFFFFE00u);
+
+static void
+disk_actual_perform_operation(unsigned int is_read, size_t block_id)
+{
+    *FLASH_CTRL = disk_flash_status(
+            0,
+            is_read,
+            !is_read,
+            block_id + partition_offset
+    );
+}
 
 static void
 disk_perform_operation(LinkedDiskRequest *request)
@@ -82,12 +95,7 @@ disk_perform_operation(LinkedDiskRequest *request)
     if (!request->msg.is_read) {
         memcpy((void*)FLASH_DATA, request->buffer, DISK_BLOCK_SIZE);
     }
-    *FLASH_CTRL = disk_flash_status(
-            0,
-            request->msg.is_read,
-            !request->msg.is_read,
-            request->msg.block_id
-    );
+    disk_actual_perform_operation(request->msg.is_read, request->msg.block_id);
 }
 
 static void
@@ -103,6 +111,20 @@ disk_insert_request_into_queue(LinkedList *queue, LinkedDiskRequest *request)
     list_append(queue, &request->_link);
 }
 
+static void
+disk_first_primary_partition_info(void)
+{
+    disk_actual_perform_operation(1, 0);
+    size_t msg_size = k_msg_wait_for(INTERRUPT_SRC);
+    char buffer[msg_size];
+    k_msg_recv_for(INTERRUPT_SRC, NULL, buffer);
+
+    partition_offset = load_unaligned_32((void*)(FLASH_DATA + 454));
+    partition_size = load_unaligned_32((void*)(FLASH_DATA + 458));
+
+    kprintf("first partition offset: 0x%x, size: 0x%x\n", partition_offset, partition_size);
+}
+
 static int
 disk_proc(void)
 {
@@ -112,6 +134,8 @@ disk_proc(void)
 
     disk_proc_pid = k_get_pid();
     list_init(&disk_request_queue);
+
+    disk_first_primary_partition_info();
 
     while (true) {
         size_t msg_size = k_msg_wait_for(0);

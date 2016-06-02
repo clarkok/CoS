@@ -35,4 +35,11 @@
 static_assert((1 << MAIN_MEMORY_SHIFT) == MAIN_MEMORY_SIZE, "memory size should match with memory shift");
 static_assert((1 << PAGE_SHIFT) == PAGE_SIZE, "page size should match with page shift");
 
+static inline uint32_t
+load_unaligned_32(void *addr)
+{
+    const uint8_t *ptr = addr;
+    return (ptr[3] << 24) + (ptr[2] << 16) + (ptr[1] << 8) + ptr[0];
+}
+
 #endif 

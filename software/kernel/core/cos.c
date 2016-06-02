@@ -22,3 +22,4 @@ init()
 
     __assert_fail();
 }
+
